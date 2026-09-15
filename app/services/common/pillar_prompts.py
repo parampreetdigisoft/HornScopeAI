@@ -21,7 +21,7 @@ _PILLAR_FEED_OUTPUT_STYLE = """
 PillarRecord = Dict[str, Union[int, str, None]]
 
 
-class AMIPillarPrompts:
+class HSPillarPrompts:
     """Provides AMIP governance rules and dynamic pillar context from database records."""
 
     GOVERNANCE_PROTOCOL = """

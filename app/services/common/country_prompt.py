@@ -5,19 +5,19 @@ Import this wherever a prompt is needed; never inline prompts in service files.
 from urllib.parse import quote
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Sequence, Tuple
-from app.services.common.pillar_prompts import AMIPillarPrompts
+from app.services.common.pillar_prompts import HSPillarPrompts
 
 
-class AMIPromptTemplates:
+class HSPromptTemplates:
     """
     Central registry of every system prompt used across AMI AI services.
 
     Usage:
-        prompt = AMIPromptTemplates.question_system_prompt(pillar_context)
-        prompt = AMIPromptTemplates.pillar_system_prompt(pillar_context, year)
-        prompt = AMIPromptTemplates.country_system_prompt(pillar_list_str)
-        prompt = AMIPromptTemplates.rag_routing_prompt(toc_text, question)
-        prompt = AMIPromptTemplates.rag_answer_system_prompt()
+        prompt = HSPromptTemplates.question_system_prompt(pillar_context)
+        prompt = HSPromptTemplates.pillar_system_prompt(pillar_context, year)
+        prompt = HSPromptTemplates.country_system_prompt(pillar_list_str)
+        prompt = HSPromptTemplates.rag_routing_prompt(toc_text, question)
+        prompt = HSPromptTemplates.rag_answer_system_prompt()
     """
 
     # ------------------------------------------------------------------ #
@@ -378,7 +378,7 @@ class AMIPromptTemplates:
         You research and score individual questions about market conditions in
         countries worldwide.
         
-        {AMIPillarPrompts.GOVERNANCE_PROTOCOL}
+        {HSPillarPrompts.GOVERNANCE_PROTOCOL}
 
         CORE TASK:
         For the question given in the user message, search the web and recent
@@ -492,8 +492,8 @@ class AMIPromptTemplates:
         - reporting_lag = current target year - source_data_year; set data_quality_flag accordingly.
         - Media / grey literature is fallback only when higher-trust sources are unavailable.
 
-        {AMIPromptTemplates._OUTPUT_STYLE}
-        {AMIPromptTemplates._JSON_RULES}
+        {HSPromptTemplates._OUTPUT_STYLE}
+        {HSPromptTemplates._JSON_RULES}
     """
 
     # ================================================================== #
@@ -514,7 +514,7 @@ class AMIPromptTemplates:
             You conduct deep, multi-source assessments of a single market pillar for a country.
             Keep each section concise. Do not exceed requested word limits.
 
-            {AMIPillarPrompts.GOVERNANCE_PROTOCOL}
+            {HSPillarPrompts.GOVERNANCE_PROTOCOL}
 
             PILLAR CONTEXT:
             {pillar_context}
@@ -670,8 +670,8 @@ class AMIPromptTemplates:
             - Do not rely only on media without higher-tier corroboration
             - Keep output clear and readable for general audiences
 
-            {AMIPromptTemplates._OUTPUT_STYLE}
-            {AMIPromptTemplates._JSON_RULES}
+            {HSPromptTemplates._OUTPUT_STYLE}
+            {HSPromptTemplates._JSON_RULES}
         """
 
     # ================================================================== #
@@ -686,9 +686,9 @@ class AMIPromptTemplates:
         Write for investors, policymakers, and a policy-literate reader.
         Do not produce public-health, outbreak, or clinical analysis.
 
-        {AMIPillarPrompts.GOVERNANCE_PROTOCOL}
+        {HSPillarPrompts.GOVERNANCE_PROTOCOL}
 
-        {AMIPromptTemplates._COUNTRY_TRAJECTORY_FRAMEWORK}
+        {HSPromptTemplates._COUNTRY_TRAJECTORY_FRAMEWORK}
 
         ALL PILLARS:
         {pillar_list_str}
@@ -784,8 +784,8 @@ class AMIPromptTemplates:
         fragmentation, tax extraction, corridor disruption, market capture, digital trust,
         and commodity governance.
 
-        {AMIPromptTemplates._OUTPUT_STYLE}
-        {AMIPromptTemplates._JSON_RULES}
+        {HSPromptTemplates._OUTPUT_STYLE}
+        {HSPromptTemplates._JSON_RULES}
         """
 
     # ================================================================== #
@@ -795,16 +795,16 @@ class AMIPromptTemplates:
     # ================================================================== #
     @staticmethod
     def country_summery_system_prompt(publicContext: str, documentContext: str) -> str:
-        publicContext = AMIPromptTemplates._clip_context(publicContext, 8000)
-        documentContext = AMIPromptTemplates._clip_context(documentContext, 8000)
+        publicContext = HSPromptTemplates._clip_context(publicContext, 8000)
+        documentContext = HSPromptTemplates._clip_context(documentContext, 8000)
         return f"""
         You are a lead analyst for the Africa Market Intelligence (AMI).
         You produce country-level executive MARKET assessments grounded in both uploaded local context
         and verified public sources. Do not produce public-health or outbreak analysis.
         
-         {AMIPillarPrompts.GOVERNANCE_PROTOCOL}
+         {HSPillarPrompts.GOVERNANCE_PROTOCOL}
 
-        {AMIPromptTemplates._COUNTRY_TRAJECTORY_FRAMEWORK}
+        {HSPromptTemplates._COUNTRY_TRAJECTORY_FRAMEWORK}
 
         Your outputs must read as high-quality executive memos for investors and policymakers.
         Be precise, structured, and insight-driven. Avoid generic summaries.
@@ -842,7 +842,7 @@ class AMIPromptTemplates:
                 recommendations LAST in the JSON (after executive_summary). Name the
                 Country Trajectory Class in System Diagnosis.
 
-        {AMIPromptTemplates._finding_and_recommendation_standard("6")}
+        {HSPromptTemplates._finding_and_recommendation_standard("6")}
 
         -----------------------------------------
         OUTPUT REQUIREMENTS
@@ -887,8 +887,8 @@ class AMIPromptTemplates:
         - Professional, analytical, investor-grade tone.
         - No fluff, no repetition. Finish the JSON.
 
-        {AMIPromptTemplates._OUTPUT_STYLE}
-        {AMIPromptTemplates._JSON_RULES}
+        {HSPromptTemplates._OUTPUT_STYLE}
+        {HSPromptTemplates._JSON_RULES}
         """
 
     # ================================================================== #
@@ -907,9 +907,9 @@ class AMIPromptTemplates:
 
         It is a concise executive memo focused on CURRENT market conditions.
 
-        {AMIPillarPrompts.GOVERNANCE_PROTOCOL}
+        {HSPillarPrompts.GOVERNANCE_PROTOCOL}
 
-        {AMIPromptTemplates._COUNTRY_TRAJECTORY_FRAMEWORK}
+        {HSPromptTemplates._COUNTRY_TRAJECTORY_FRAMEWORK}
 
         -----------------------------------------
         SCOPE & PRIORITY (CRITICAL)
@@ -945,7 +945,7 @@ class AMIPromptTemplates:
         Step 8: Only then generate recommendations using the Recommendation Standard.
                 If the 7-30 day evidence is sufficient, name the likely trajectory class.
 
-        {AMIPromptTemplates._finding_and_recommendation_standard("6")}
+        {HSPromptTemplates._finding_and_recommendation_standard("6")}
 
         -----------------------------------------
         OUTPUT REQUIREMENTS
@@ -977,8 +977,8 @@ class AMIPromptTemplates:
         - Professional, analytical, investor-decision-oriented tone.
         - No fluff, no historical filler. Finish the JSON.
 
-        {AMIPromptTemplates._OUTPUT_STYLE}
-        {AMIPromptTemplates._JSON_RULES}
+        {HSPromptTemplates._OUTPUT_STYLE}
+        {HSPromptTemplates._JSON_RULES}
         """
 
     # ================================================================== #
@@ -1484,7 +1484,7 @@ class AMIPromptTemplates:
                [turn0news16], [turn0search0], or similar. The backend converts
                those to clickable links. Write [Outlet, date][source_N] instead.
 
-            OUTPUT in MARKDOWN : {AMIPromptTemplates.MARKDOWN_FORMAT_PROMPT}
+            OUTPUT in MARKDOWN : {HSPromptTemplates.MARKDOWN_FORMAT_PROMPT}
         """
         
     # ─── USER PROMPT ─────────────────────────────────────────────────────────
@@ -1571,7 +1571,7 @@ class AMIPromptTemplates:
         SYSTEMIC MARKET RISKS, and EMERGING EARLY WARNINGS.
         Do not produce public-health or outbreak analysis.
 
-        {AMIPromptTemplates._COUNTRY_TRAJECTORY_FRAMEWORK}
+        {HSPromptTemplates._COUNTRY_TRAJECTORY_FRAMEWORK}
 
         The output powers a high-level executive dashboard
         with 3 major analytical sections:
@@ -1806,9 +1806,9 @@ class AMIPromptTemplates:
         - No bullet points
         - No explanations outside JSON
 
-        {AMIPromptTemplates._OUTPUT_STYLE}
+        {HSPromptTemplates._OUTPUT_STYLE}
 
-        {AMIPromptTemplates._JSON_RULES}
+        {HSPromptTemplates._JSON_RULES}
     """
 
     
@@ -1854,13 +1854,13 @@ class AMIPromptTemplates:
 
     @staticmethod
     def gdelt_emerging_variant_count() -> int:
-        return len(AMIPromptTemplates.GDELT_EMERGING_KEYWORD_VARIANTS)
+        return len(HSPromptTemplates.GDELT_EMERGING_KEYWORD_VARIANTS)
 
     @staticmethod
     def pick_gdelt_emerging_variant_index() -> int:
         """Rotate variant every 5 minutes (UTC) so repeated calls are not identical."""
         bucket = int(datetime.now(timezone.utc).timestamp()) // 300
-        return bucket % AMIPromptTemplates.gdelt_emerging_variant_count()
+        return bucket % HSPromptTemplates.gdelt_emerging_variant_count()
 
     @staticmethod
     def _gdelt_africa_scope_clause(
@@ -1887,7 +1887,7 @@ class AMIPromptTemplates:
         region_groups: Sequence[Sequence[str]],
     ) -> str:
         market_inner = " OR ".join(k.strip() for k in keywords if k and k.strip())
-        africa_inner = AMIPromptTemplates._gdelt_africa_scope_clause(
+        africa_inner = HSPromptTemplates._gdelt_africa_scope_clause(
             variant_index, all_country_codes, region_groups
         )
         return f"({market_inner}) {africa_inner} sourcelang:english"
@@ -1905,15 +1905,15 @@ class AMIPromptTemplates:
         Returns (url, variant_index_used). Country codes come from the Countries
         table; each variant rotates market keywords and region-scoped source filters.
         """
-        variants = AMIPromptTemplates.GDELT_EMERGING_KEYWORD_VARIANTS
+        variants = HSPromptTemplates.GDELT_EMERGING_KEYWORD_VARIANTS
         n_variants = len(variants)
         if variant_index is None:
-            idx = AMIPromptTemplates.pick_gdelt_emerging_variant_index()
+            idx = HSPromptTemplates.pick_gdelt_emerging_variant_index()
         else:
             idx = int(variant_index) % n_variants
 
         n = max(1, min(250, int(max_records)))
-        query = AMIPromptTemplates._gdelt_emerging_query_string(
+        query = HSPromptTemplates._gdelt_emerging_query_string(
             variants[idx], idx, all_country_codes, region_groups
         )
         encoded_query = quote(query, safe="")
@@ -2034,8 +2034,8 @@ class AMIPromptTemplates:
         - red
         - blue
 
-        {AMIPromptTemplates._OUTPUT_STYLE}
-        {AMIPromptTemplates._JSON_RULES}
+        {HSPromptTemplates._OUTPUT_STYLE}
+        {HSPromptTemplates._JSON_RULES}
         """
 
     @staticmethod

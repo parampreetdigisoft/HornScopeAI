@@ -12,6 +12,7 @@ import pandas as pd
 from app.services.core.connection import DBEngine, db_engine
 logger = logging.getLogger(__name__)
 
+# Must match _build_question_record and dbo.TVP_PillarQuestionCountryEvaluationType.
 _PILLAR_QUESTION_COUNTRY_EVAL_TVP_COLUMNS = [
     ("CountryID", "int"),
     ("PillarID", "int"),
@@ -27,15 +28,12 @@ _PILLAR_QUESTION_COUNTRY_EVAL_TVP_COLUMNS = [
     ("OperationalEvidence", "nvarchar(max)"),
     ("OutcomeEvidence", "nvarchar(max)"),
     ("PerceptionEvidence", "nvarchar(max)"),
-    ("TemporalScope", "nvarchar(max)"),
-    ("DistortionScreening", "nvarchar(max)"),
+    ("TemporalReliability", "nvarchar(max)"),
     ("RelationalDependencies", "nvarchar(max)"),
-    ("StressPoliticalShock", "nvarchar(max)"),
+    ("StressGeopoliticalShock", "nvarchar(max)"),
     ("StressEconomicShock", "nvarchar(max)"),
-    ("StressNarrativeShock", "nvarchar(max)"),
-    ("StressOverallResilienceShock", "nvarchar(max)"),
-    ("InequalityAdjustment", "nvarchar(max)"),
-    ("OpacityRisk", "nvarchar(max)"),
+    ("StressFinanceShock", "nvarchar(max)"),
+    ("DataOpacityRisk", "nvarchar(max)"),
     ("RedFlag", "nvarchar(max)"),
     ("SourceName", "varchar(max)"),
     ("SourceType", "varchar(200)"),
@@ -190,19 +188,19 @@ class DatabaseRepository:
         if not rows:
             return
 
+        # Must match _build_country_record keys that the country TVP/SP accepts.
         col_order = [
-            "CountryID", "Year", "AIScore", "AIProgress",
+            "CountryID", "Year","AIProgress",
             "EvaluatorScore", "Discrepancy", "ConfidenceLevel",
             "EvidenceSummary", "StructuralEvidence",
             "OperationalEvidence", "OutcomeEvidence", "PerceptionEvidence",
-            "TemporalScope", "DistortionScreening",
-            "PoliticalShock", "EconomicShock", "NarrativeShock",
-            "OverallStressResilience", "StressScoreAdjustment",
-            "InequalityAdjustment", "OpacityRisk", "NonCompensationNote",
+            "ReliabilityAssessment", "TemporalReliability",
+            "GeopoliticalShock", "EconomicShock", "FinanceShock",
+            "DataIntegrityIndex", "DataOpacityRisk",
+            "ScenarioAnalysis",
             "CrossPillarPatterns", "RelationalIntegrity",
-            "InstitutionalCapacity", "EquityAssessment",
-            "ConflictRiskOutlook", "StrategicRecommendation",
-            "DataTransparencyNote", "PrimarySource",
+            "EarlyWarningAssessment",
+            "StrategicRecommendation", "DataTransparencyNote", "PrimarySource",
         ]
 
         records = self.engine.rows_to_tuples(rows, col_order)
@@ -346,27 +344,29 @@ class DatabaseRepository:
     ) -> Dict[str, Any]:
 
         query = """
-            SELECT 
-                a.AIProgress as PeaceEnablerScore,
+            SELECT
+                a.AIProgress AS CountryScore,
                 c.CountryName,
                 c.Continent,
                 a.EvidenceSummary,
                 a.StructuralEvidence,
+                a.OperationalEvidence,
                 a.OutcomeEvidence,
                 a.PerceptionEvidence,
+                a.ReliabilityAssessment,
+                a.TemporalReliability,
+                a.GeopoliticalShock,
+                a.EconomicShock,
+                a.FinanceShock,
+                a.DataIntegrityIndex,
+                a.DataOpacityRisk,
+                a.ScenarioAnalysis,
                 a.CrossPillarPatterns,
+                a.RelationalIntegrity,
+                a.EarlyWarningAssessment,
                 a.StrategicRecommendation,
-                a.TemporalScope,
-				a.DistortionScreening,
-				a.PoliticalShock,
-				a.EconomicShock,
-				a.NarrativeShock,
-				a.RelationalIntegrity,
-				a.InstitutionalCapacity,
-				a.EquityAssessment,
-				a.ConflictRiskOutlook,
-				a.PrimarySource,
-				a.DataTransparencyNote,
+                a.DataTransparencyNote,
+                a.PrimarySource,
                 p.PillarName
             FROM Countries c
             left JOIN AICountryScores a 
@@ -376,7 +376,7 @@ class DatabaseRepository:
             
         """
 
-        params = (pillar_id, year, country_id)
+        params = (year, pillar_id, country_id)
 
 
         result = await self.engine.fetch_dicts_async(query, params)

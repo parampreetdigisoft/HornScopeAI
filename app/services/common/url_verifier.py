@@ -7,10 +7,10 @@ from __future__ import annotations
 import logging
 from typing import Optional
 from urllib.parse import quote_plus, urlparse
-
 import httpx
 
 logger = logging.getLogger(__name__)
+
 _SEARCH_HOSTS = (
     "google.",
     "bing.com",
@@ -132,9 +132,9 @@ async def ensure_live_source_url(
     title: str,
 ) -> str:
     """
-    Keep a live article URL; replace search listings and dead links with Google News.
+    Keep the URL if it loads; otherwise return a Google News search for the story.
     """
-    if not is_search_results_url(url) and await is_url_live(url):
+    if await is_url_live(url):
         return url
 
     fallback = build_google_news_search_url(country, title)

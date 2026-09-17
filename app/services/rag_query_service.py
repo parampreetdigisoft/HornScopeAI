@@ -177,13 +177,13 @@ class RAGQueryService:
         pillar_name: str,
         historyText: Optional[str] = None,
     ) -> str:
-        context_text = self._context_to_text(ai_context)
+        # context_text = self._context_to_text(ai_context)
         system_prompt = HSPromptTemplates.chat_system_prompt()
         user_prompt = HSPromptTemplates.chat_answer_user_prompt(
-            context_text, historyText, questionText, countryName, pillar_name
+            ai_context, historyText, questionText, countryName, pillar_name
         )
 
-        if question_needs_web_search(questionText, context_text) and web_search_available():
+        if question_needs_web_search(questionText, ai_context) and web_search_available():
             try:
                 answer, web_sources = await invoke_with_web_search(
                     system_prompt,
@@ -203,28 +203,28 @@ class RAGQueryService:
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
             ],
-            label=f"rag_answer|country{countryName}",
+            label=f"rag_answer|program{countryName}|pillar{pillar_name}|q={questionText[:40]}",
         )
      
         return apply_verified_citations(answer,[])
 
-    @staticmethod
-    def _context_to_text(ai_context: Any) -> str:
-        if ai_context is None:
-            return ""
-        if isinstance(ai_context, str):
-            return ai_context
-        if isinstance(ai_context, dict):
-            return "\n".join(f"{k}: {value}" for k, value in ai_context.items())
-        if isinstance(ai_context, (list, tuple, set)):
-            lines = []
-            for item in ai_context:
-                if isinstance(item, dict):
-                    lines.append(" | ".join(f"{k}: {v}" for k, v in item.items()))
-                else:
-                    lines.append(str(item))
-            return "\n".join(lines)
-        return str(ai_context)
+    # @staticmethod
+    # def _context_to_text(ai_context: Any) -> str:
+    #     if ai_context is None:
+    #         return ""
+    #     if isinstance(ai_context, str):
+    #         return ai_context
+    #     if isinstance(ai_context, dict):
+    #         return "\n".join(f"{k}: {value}" for k, value in ai_context.items())
+    #     if isinstance(ai_context, (list, tuple, set)):
+    #         lines = []
+    #         for item in ai_context:
+    #             if isinstance(item, dict):
+    #                 lines.append(" | ".join(f"{k}: {v}" for k, v in item.items()))
+    #             else:
+    #                 lines.append(str(item))
+    #         return "\n".join(lines)
+    #     return str(ai_context)
     
     # ------------------------------------------------------------------ #
     #  Stage 1 — DB: fetch TOC                                           #
@@ -355,7 +355,7 @@ class RAGQueryService:
                     "relevance": round(1 - dist, 3),
                     "source_url": meta.get("source_url") or meta.get("sourceUrl") or "",
                     "source_name": meta.get("source_name") or meta.get("sourceName") or "",
-                    "published_date": meta.get("published_date") or meta.get("source_data_year") or "",
+                    "published_date": meta.get("published_date") or meta.get("source_data_year") or ""
                 }
             )
         return chunks
@@ -605,7 +605,7 @@ class RAGQueryService:
             system_prompt = HSPillarPrompts.pillar_live_signals_prompt(pillars)
 
             user_template = f"""
-            Generate the LIVE African HSP pillar signals feed (all {pillar_count} active pillars).
+            Generate the LIVE HS pillar signals feed (all {pillar_count} active pillars).
 
             Current UTC datetime (now):
             {{current_date}}
@@ -655,7 +655,9 @@ class RAGQueryService:
     @staticmethod
     def _build_context_block(chunks: List[Dict]) -> str:
         if not chunks:
-           from app.services.common.url_verifier import is_valid_source_url
+           return ""
+
+        from app.services.common.url_verifier import is_valid_source_url
 
         catalog: List[str] = []
         lines = ["=== FROM UPLOADED COUNTRY DOCUMENTS ==="]

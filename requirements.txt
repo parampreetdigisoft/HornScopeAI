@@ -30,16 +30,16 @@
 
 # cd C:\nssm\win64
 # $nssm = "C:\nssm\win64\nssm.exe"
-# $serviceName = "Market_Intelligence_AI"
-# $pythonPath = "C:\inetpub\wwwroot\Market_Intelligence_AI\.venv\Scripts\python.exe"
-# $workDir = "C:\inetpub\wwwroot\Market_Intelligence_AI"
+# $serviceName = "Hornscope_AI"
+# $pythonPath = "C:\inetpub\wwwroot\Hornscope_AI\.venv\Scripts\python.exe"
+# $workDir = "C:\inetpub\wwwroot\Hornscope_AI"
 # & $nssm install $serviceName $pythonPath "run.py"
 # & $nssm set $serviceName AppDirectory $workDir
-# & $nssm set $serviceName AppStdout "C:\inetpub\wwwroot\Market_Intelligence_AI\logs\service.log"
-# & $nssm set $serviceName AppStderr "C:\inetpub\wwwroot\Market_Intelligence_AI\logs\error.log"
+# & $nssm set $serviceName AppStdout "C:\inetpub\wwwroot\Hornscope_AI\logs\service.log"
+# & $nssm set $serviceName AppStderr "C:\inetpub\wwwroot\Hornscope_AI\logs\error.log"
 # & $nssm set $serviceName Start SERVICE_AUTO_START
 # & $nssm start $serviceName
-# New-Item -ItemType Directory -Force "C:\inetpub\wwwroot\Market_Intelligence_AI\logs"
+# New-Item -ItemType Directory -Force "C:\inetpub\wwwroot\Hornscope_AI\logs"
 
 # db script for access 
 # CREATE LOGIN [NT AUTHORITY\SYSTEM] FROM WINDOWS;
@@ -50,9 +50,9 @@
 
 # # Restrart nssm
 # cd C:\nssm\win64
-# .\nssm.exe stop Market_Intelligence_AI
-# .\nssm.exe start Market_Intelligence_AI
-# .\nssm.exe restart Market_Intelligence_AI
+# .\nssm.exe stop Hornscope_AI
+# .\nssm.exe start Hornscope_AI
+# .\nssm.exe restart Hornscope_AI
 
 
 

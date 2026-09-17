@@ -269,8 +269,8 @@ class ScoreAnalyzerService:
                         )
                         continue
 
-                    normalized = self._safe_normalized(row.NormalizedValue)
-                    batch.append(self._build_question_record(row, ai_data, normalized))
+                    scoreProgress = self._safe_normalized(row.ScoreProgress)
+                    batch.append(self._build_question_record(row, ai_data, scoreProgress))
                     batch = await self._flushQuestion(
                         country.CountryID, batch ,self._db.bulk_upsert_question_evaluations
                     )
@@ -425,10 +425,10 @@ class ScoreAnalyzerService:
         self,
         row: Any,
         ai: dict,
-        normalized_value: float,
+        scoreProgress: float,
     ) -> dict:
         ai_progress = self._to_float(ai.get("AIProgress") or 0)
-        evaluator_score = self._to_float(normalized_value * 100)
+        evaluator_score = self._to_float(scoreProgress)
 
         return {
             "CountryID": row.CountryID,
@@ -445,15 +445,12 @@ class ScoreAnalyzerService:
             "OperationalEvidence": ai.get("OperationalEvidence"),
             "OutcomeEvidence": ai.get("OutcomeEvidence"),
             "PerceptionEvidence": ai.get("PerceptionEvidence"),
-            "TemporalScope": ai.get("TemporalScope"),
-            "DistortionScreening": ai.get("DistortionScreening"),
+            "TemporalReliability": ai.get("TemporalReliability"),
             "RelationalDependencies": ai.get("RelationalDependencies"),
-            "StressPoliticalShock": ai.get("StressPoliticalShock"),
+            "StressGeopoliticalShock": ai.get("StressGeopoliticalShock"),
             "StressEconomicShock": ai.get("StressEconomicShock"),
-            "StressNarrativeShock": ai.get("StressNarrativeShock"),
-            "StressOverallResilienceShock": ai.get("StressOverallResilienceShock"),
-            "InequalityAdjustment": ai.get("InequalityAdjustment"),
-            "OpacityRisk": ai.get("OpacityRisk"),
+            "StressFinanceShock": ai.get("StressFinanceShock"),
+            "DataOpacityRisk": ai.get("DataOpacityRisk"),
             "RedFlag": ai.get("RedFlag"),
             "SourceName": ai.get("SourceName"),
             "SourceType": ai.get("SourceType"),
@@ -482,19 +479,13 @@ class ScoreAnalyzerService:
             "OperationalEvidence": ai.get("OperationalEvidence"),
             "OutcomeEvidence": ai.get("OutcomeEvidence"),
             "PerceptionEvidence": ai.get("PerceptionEvidence"),
-            "TemporalScope": ai.get("TemporalScope"),
-            "DistortionScreening": ai.get("DistortionScreening"),
+            "TemporalReliability": ai.get("TemporalReliability"),
             "RelationalIntegrity": ai.get("RelationalIntegrity"),
-            "StressPoliticalShock": ai.get("StressPoliticalShock"),
+            "StressGeopoliticalShock": ai.get("StressGeopoliticalShock"),
             "StressEconomicShock": ai.get("StressEconomicShock"),
-            "StressNarrativeShock": ai.get("StressNarrativeShock"),
-            "StressOverallResilience": ai.get("StressOverallResilience"),
-            "StressScoreAdjustment": ai.get("StressScoreAdjustment"),
-            "InequalityAdjustment": ai.get("InequalityAdjustment"),
-            "OpacityRisk": ai.get("OpacityRisk"),
-            "NonCompensationNote": ai.get("NonCompensationNote"),
-            "GeographicEquityNote": ai.get("GeographicEquityNote"),
-            "InstitutionalAssessment": ai.get("InstitutionalAssessment"),
+            "StressFinanceShock": ai.get("StressFinanceShock"),
+            "DataOpacityRisk": ai.get("DataOpacityRisk"),
+            "ReliabilityAssessment": ai.get("ReliabilityAssessment"),
             "DataGapAnalysis": ai.get("DataGapAnalysis"),
             "RedFlag": ai.get("RedFlag"),
         }
@@ -506,7 +497,6 @@ class ScoreAnalyzerService:
         return {
             "CountryID": row.CountryID,
             "Year": self._to_int(ai.get("Year") or datetime.now().year),
-            "AIScore": self._to_float(ai.get("AIScore")),
             "AIProgress": ai_progress,
             "EvaluatorScore": evaluator_score,
             "Discrepancy": self._discrepancy(ai_progress, evaluator_score),
@@ -516,21 +506,17 @@ class ScoreAnalyzerService:
             "OperationalEvidence": ai.get("OperationalEvidence"),
             "OutcomeEvidence": ai.get("OutcomeEvidence"),
             "PerceptionEvidence": ai.get("PerceptionEvidence"),
-            "TemporalScope": ai.get("TemporalScope"),
-            "DistortionScreening": ai.get("DistortionScreening"),
-            "PoliticalShock": ai.get("PoliticalShock"),
+            "ReliabilityAssessment": ai.get("ReliabilityAssessment"),
+            "TemporalReliability": ai.get("TemporalReliability"),
+            "GeopoliticalShock": ai.get("GeopoliticalShock"),
             "EconomicShock": ai.get("EconomicShock"),
-            "NarrativeShock": ai.get("NarrativeShock"),
-            "OverallStressResilience": ai.get("OverallStressResilience"),
-            "StressScoreAdjustment": ai.get("StressScoreAdjustment"),
-            "InequalityAdjustment": ai.get("InequalityAdjustment"),
-            "OpacityRisk": ai.get("OpacityRisk"),
-            "NonCompensationNote": ai.get("NonCompensationNote"),
+            "FinanceShock": ai.get("FinanceShock"),
+            "DataIntegrityIndex": ai.get("DataIntegrityIndex"),
+            "DataOpacityRisk": ai.get("DataOpacityRisk"),
+            "ScenarioAnalysis": ai.get("ScenarioAnalysis"),
             "CrossPillarPatterns": ai.get("CrossPillarPatterns"),
             "RelationalIntegrity": ai.get("RelationalIntegrity"),
-            "InstitutionalCapacity": ai.get("InstitutionalCapacity"),
-            "EquityAssessment": ai.get("EquityAssessment"),
-            "ConflictRiskOutlook": ai.get("ConflictRiskOutlook"),
+            "EarlyWarningAssessment": ai.get("EarlyWarningAssessment"),
             "StrategicRecommendation": ai.get("StrategicRecommendation"),
             "DataTransparencyNote": ai.get("DataTransparencyNote"),
             "PrimarySource": ai.get("PrimarySource"),

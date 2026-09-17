@@ -207,7 +207,7 @@ async def get_emerging_trends_and_issues(
         default=None,
         ge=0,
         description=(
-            "GDELT market keyword variant index (0–7). Omit to auto-rotate every 5 minutes. "
+            "GDELT market keyword variant index (0-7). Omit to auto-rotate every 5 minutes. "
             "Each variant uses different Africa-scoped market risk keywords."
         ),
     ),
@@ -216,7 +216,7 @@ async def get_emerging_trends_and_issues(
     Public homepage feed for emerging African market risks and trends.
 
     Fetches GDELT articles (last 24h) filtered for Africa and market-related topics,
-    then returns structured country cards for the Market Intelligence UI.
+    then returns structured country cards for the Hornscope UI.
     """
     try:
         response = await chat_service.get_emerging_trends_and_issues(

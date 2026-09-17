@@ -23,8 +23,11 @@ logger = logging.getLogger(__name__)
 
 def clean_json_response(response: str) -> str:
     """
-    Strip markdown fences and extract the first well-formed JSON object
+    Strip markdown fences and extract a well-formed JSON value
     from a raw LLM response string.
+
+    If the model emits extra keys after the first object closes
+    (common Extra data error), those trailing fields are merged in.
 
     Raises:
         ValueError: if no valid JSON object can be recovered.
@@ -154,9 +157,9 @@ def validate_question_response(data: Dict) -> Dict:
         data,
         [
             "ai_score", "confidence_level", "evidence_summary",
-            "four_layer_evidence", "temporal_scope", "distortion_screening",
+            "four_layer_evidence", "temporal_reliability",
             "relational_dependencies", "stress_simulation",
-            "inequality_adjustment", "opacity_risk",
+            "opacity_risk",
         ],
     )
     _validate_ai_score(data)
@@ -169,7 +172,9 @@ def validate_pillar_response(data: Dict) -> Dict:
     _require_fields(
         data,
         ["ai_score", "confidence_level", "evidence_summary",
-         "institutional_assessment", "data_gap_analysis"],
+         "four_layer_evidence", "temporal_reliability", "relational_integrity",
+         "reliability_assessment", "stress_simulation", "data_gap_analysis",
+         "opacity_risk"],
     )
     _validate_ai_score(data)
     _validate_confidence(data)
@@ -181,14 +186,15 @@ def validate_country_response(data: Dict) -> Dict:
     _require_fields(
         data,
         [
-            "ai_score", "confidence_level", "executive_summary",
-            "cross_pillar_patterns", "institutional_capacity",
-            "equity_assessment", "conflict_risk_outlook",
-            "strategic_recommendation", "data_transparency_note",
-            "stress_simulation", "inequality_adjustment", "opacity_risk",
+            "confidence_level", "executive_summary",
+            "four_layer_evidence", "temporal_reliability", "reliability_assessment",
+            "stress_simulation", "opacity_risk", "cross_pillar_patterns",
+            "relational_integrity", "early_warning_assessment",
+            "strategic_recommendation","data_transparency_note",
+            "primary_source", "scenario_analysis",
+            "data_integrity_index",
         ],
     )
-    _validate_ai_score(data)
     _validate_confidence(data)
     return data
 
@@ -221,18 +227,12 @@ def map_question_response(
         "PerceptionEvidence": four.get("perception"),
         # Narrative fields
         "EvidenceSummary": analysis.get("evidence_summary"),
-        "TemporalScope": analysis.get("temporal_scope"),
-        "DistortionScreening": analysis.get("distortion_screening"),
+        "TemporalReliability": analysis.get("temporal_reliability"),
         "RelationalDependencies": analysis.get("relational_dependencies"),
-        # Stress simulation
-        "StressPoliticalShock": stress.get("political_shock"),
+        "StressGeopoliticalShock": stress.get("geopolitical_shock"),
         "StressEconomicShock": stress.get("economic_shock"),
-        "StressNarrativeShock": stress.get("narrative_shock"),
-        "StressOverallResilienceShock": stress.get("overall_stress_resilience"),
-        # Adjustments & flags
-        "InequalityAdjustment": analysis.get("inequality_adjustment"),
-        "OpacityRisk": analysis.get("opacity_risk"),
-        "NonCompensationNote": analysis.get("non_compensation_note"),
+        "StressFinanceShock": stress.get("finance_shock"),
+        "DataOpacityRisk": analysis.get("opacity_risk"),
         "RedFlag": analysis.get("red_flag"),
         # Source fields (single primary source at question level)
         "SourceName": analysis.get("source_name"),
@@ -275,21 +275,13 @@ def map_pillar_response(
         "OutcomeEvidence": analysis.get("four_layer_evidence", {}).get("outcome"),
         "PerceptionEvidence": analysis.get("four_layer_evidence", {}).get("perception"),
         # Temporal & distortion
-        "TemporalScope": analysis.get("temporal_scope"),
-        "DistortionScreening": analysis.get("distortion_screening"),
+        "TemporalReliability": analysis.get("temporal_reliability"),
         "RelationalIntegrity": analysis.get("relational_integrity"),
-        # Stress simulation
-        "StressPoliticalShock": stress.get("political_shock"),
+        "StressGeopoliticalShock": stress.get("geopolitical_shock"),
         "StressEconomicShock": stress.get("economic_shock"),
-        "StressNarrativeShock": stress.get("narrative_shock"),
-        "StressOverallResilience": stress.get("overall_stress_resilience"),
-        "StressScoreAdjustment": stress.get("stress_score_adjustment"),
-        # Adjustments & flags
-        "InequalityAdjustment": analysis.get("inequality_adjustment"),
-        "OpacityRisk": analysis.get("opacity_risk"),
-        "NonCompensationNote": analysis.get("non_compensation_note"),
-        "GeographicEquityNote": analysis.get("geographic_equity_note"),
-        "InstitutionalAssessment": analysis.get("institutional_assessment"),
+        "StressFinanceShock": stress.get("finance_shock"),
+        "DataOpacityRisk": analysis.get("opacity_risk"),
+        "ReliabilityAssessment": analysis.get("reliability_assessment"),
         "DataGapAnalysis": analysis.get("data_gap_analysis"),
         "RedFlag": analysis.get("red_flag"),
         # Sources — lag/flag recomputed from platform Target Year
@@ -308,34 +300,24 @@ def map_country_response(
         "success": True,
         "CountryID": None,
         "Year": year,
-        # Scores
-        "AIScore": analysis.get("ai_score"),
         "AIProgress": analysis.get("ai_progress"),
         "ConfidenceLevel": analysis.get("confidence_level"),
         "ExecutiveSummary": analysis.get("executive_summary"),
-        # Four-layer evidence
         "StructuralEvidence": four.get("structural"),
         "OperationalEvidence": four.get("operational"),
         "OutcomeEvidence": four.get("outcome"),
         "PerceptionEvidence": four.get("perception"),
-        # Temporal & distortion
-        "TemporalScope": analysis.get("temporal_scope"),
-        "DistortionScreening": analysis.get("distortion_screening"),
-        # Stress simulation
-        "PoliticalShock": stress.get("political_shock"),
+        "ReliabilityAssessment": analysis.get("reliability_assessment"),
+        "TemporalReliability": analysis.get("temporal_reliability"),
+        "GeopoliticalShock": stress.get("geopolitical_shock") or stress.get("political_shock"),
         "EconomicShock": stress.get("economic_shock"),
-        "NarrativeShock": stress.get("narrative_shock"),
-        "OverallStressResilience": stress.get("overall_stress_resilience"),
-        "StressScoreAdjustment": stress.get("stress_score_adjustment"),
-        # Adjustments, patterns & flags
-        "InequalityAdjustment": analysis.get("inequality_adjustment"),
-        "OpacityRisk": analysis.get("opacity_risk"),
-        "NonCompensationNote": analysis.get("non_compensation_note"),
+        "FinanceShock": stress.get("finance_shock"),
+        "DataIntegrityIndex": analysis.get("data_integrity_index"),
+        "DataOpacityRisk": analysis.get("opacity_risk"),
+        "ScenarioAnalysis": analysis.get("scenario_analysis"),
         "CrossPillarPatterns": analysis.get("cross_pillar_patterns"),
         "RelationalIntegrity": analysis.get("relational_integrity"),
-        "InstitutionalCapacity": analysis.get("institutional_capacity"),
-        "EquityAssessment": analysis.get("equity_assessment"),
-        "ConflictRiskOutlook": analysis.get("conflict_risk_outlook"),
+        "EarlyWarningAssessment": analysis.get("early_warning_assessment"),
         "StrategicRecommendation": analysis.get("strategic_recommendation"),
         "DataTransparencyNote": analysis.get("data_transparency_note"),
         "PrimarySource": analysis.get("primary_source"),
@@ -535,10 +517,10 @@ def _validate_ai_score(data: Dict) -> None:
         )
 
 def _validate_confidence(data: Dict) -> None:
-    valid = {"High", "Medium", "Low","N/A", "Indeterminate"}
+    valid = {"High", "Medium", "Low","N/A","NA", "Indeterminate"}
     if data.get("confidence_level") not in valid:
         logger.warning(
             "Invalid confidence_level '%s'. Defaulting to 'Medium'.",
             data.get("confidence_level"),
         )
-        data["confidence_level"] = "Medium"
+        data["confidence_level"] = "Indeterminate"

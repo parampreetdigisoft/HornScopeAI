@@ -67,9 +67,9 @@ class ChatService:
             ai_context = await self._db.GetLocalContextDataForLLM([faqid],country_id,pillar_id)
             
         if len(ai_context) < 1:
-            ai_context = "\n".join(f"{key}: {value}" for key, value in ai_country_context.items())
-        pillar_name =ai_country_context["PillarName"]
-        countryName =ai_country_context["CountryName"]
+            ai_context = "\n".join(f"{key}: {value}" for key, value in (ai_country_context or {}).items())
+        pillar_name = (ai_country_context or {}).get("PillarName", "")
+        countryName = (ai_country_context or {}).get("CountryName", "")
 
         answer = await rag_query_service.send_question_to_llm(questionText,ai_context,countryName,pillar_name,historyText)
 

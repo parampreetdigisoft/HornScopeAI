@@ -1,6 +1,6 @@
 """
 Data Analyzer Service - LLM-powered analysis of SQL Server data
-Enhanced with Africa Market Intelligence Platform (AMIP) pillar prompts.
+Enhanced with HornScope Platform (HSP) pillar prompts.
 Pillars are loaded dynamically from the database — not hardcoded.
 """
 
@@ -22,129 +22,140 @@ PillarRecord = Dict[str, Union[int, str, None]]
 
 
 class HSPillarPrompts:
-    """Provides AMIP governance rules and dynamic pillar context from database records."""
+    """Provides HSP governance rules and dynamic pillar context from database records."""
 
     GOVERNANCE_PROTOCOL = """
         =============================================================================
-        AI MASTER GOVERNANCE PROTOCOL (AMIP) — MANDATORY FOR EVERY ASSESSMENT
-        Africa Market Intelligence Platform
+        AI MASTER GOVERNANCE PROTOCOL (HSP) — MANDATORY FOR EVERY ASSESSMENT
+        HornScope Platform
         =============================================================================
 
-        1. DATA INPUTS FOR COUNTRY TRAJECTORY & MARKET INTELLIGENCE
-        AMIP ingests and correlates multi-source data, including:
-        - Central bank circulars, emergency FX directives, surrender rules, and reserve data.
-        - Parallel-market exchange-rate spreads, import backlogs, unpaid LCs, and FX queues.
-        - Cabinet/ministerial speeches, leaked draft regulations, inspections, raids, and
-          parliamentary fast-track procedures.
-        - Commercial-court backlogs, ignored court orders, executive interference, and
-          judiciary budget signals.
-        - Cabinet reshuffles, party faction disputes, security-leadership changes, and
-          protest-escalation patterns.
-        - Fiscal-revenue shortfalls, debt-service stress, VAT refund delays, and emergency levies.
-        - Port/border/highway disruption, customs outages, truck-queue mentions, and corridor
-          security deployments.
-        - Large-contract awards, monopolistic regulations, competition-authority actions, and
-          elite sector carve-outs.
-        - Cyber incidents, data-localization/surveillance laws, telecom shutdowns, and bank
-          IT failures.
-        - Commodity-price swings, resource-nationalism speeches, export bans, windfall-tax
-          drafts, and contract-renegotiation signals.
-        - IMF/IFI negotiation status, investor repatriation delays, and importer/bank chatter.
+        1. DATA INPUTS FOR COUNTRY TRAJECTORY AND STRATEGIC INTELLIGENCE
+        HSP ingests and correlates multi-source data for the Horn of Africa and East Africa.
         These data streams are updated on rolling cycles and standardized prior to modeling.
+        Approved source categories:
+        - Official Documents: Government reports, parliamentary records, policy documents,
+          budget statements.
+        - Security Reports: Conflict monitoring, terrorism tracking, peace agreement monitoring.
+        - Economic Data: IMF, World Bank, central bank reports; market data; trade statistics.
+        - Media & Real-Time Reporting: Major regional and international media, specialist
+          intelligence publications (context and recency only; never primary evidence).
+        - Diplomatic Records: Foreign ministry statements, diplomatic cables, treaty registrations.
+        - Civil Society Reports: NGO assessments, human rights reporting, local governance
+          monitoring.
+        - Satellite & Geospatial: Infrastructure assessment, agricultural monitoring,
+          disaster tracking.
+        - Academic & Research: Peer-reviewed research, think tank analysis, policy papers.
 
-        2. AI MODELING ARCHITECTURE
-        AMIP employs an ensemble modeling approach, combining:
-        - Tree-based machine-learning models (random forests, gradient boosting) for non-linear
-          pattern detection across market-risk signals.
-        - Neural networks for complex interaction effects among FX, regulatory, political, and
-          logistics domains.
-        - Time-series forecasting models (ARIMA, Prophet) for spreads, reserves, prices, and
-          fiscal stress.
-        - Anomaly-detection algorithms for abrupt regulatory, FX, corridor, or cyber shocks.
-        - Network models of elite capture, contract concentration, and trade-corridor exposure.
-        Individual model outputs are combined into a composite country-trajectory score through
-        ensemble weighting. Models are retrained on rolling windows, back-tested against
-        historical market shocks, and monitored for performance drift.
+        2. AI DISCOVERY PROTOCOL
+        For every assessment, HSP must:
+        1. Identify the assessment context (country, time period, focus areas).
+        2. Generate search queries based on the context and pillar structure.
+        3. Execute autonomous web searches using approved sources.
+        4. Retrieve and download documents in original format.
+        5. Parse and process documents using layout-aware parsing and extraction.
+        6. Store processed documents in a vector database for evidence retrieval.
+        7. Generate a Discovery Report listing all sources found with metadata.
+        8. Flag missing or unavailable sources for human follow-up (Stage 2).
 
-        3. PREDICTION HORIZONS
-        - Near-term operational: 7–30 days
-        - Short-term: 1–4 weeks
-        - Medium-term: 1–3 months
-        - Investor lock-in / FX entrapment: 12–24 months
+        3. DISCOVERY QUALITY ASSURANCE
+        Apply these targets before using sources in an assessment. If a metric is
+        below target, take the stated action:
+        - Source Coverage: ≥90% of known relevant sources.
+          Action if below: AI re-runs search with alternative queries.
+        - Source Freshness: sources from within the last 12 months.
+          Action if below: flag older sources for human review.
+        - Source Authority: ≥80% from high-authority sources.
+          Action if below: flag low-authority sources for human verification.
+        - Document Retrieval: ≥95% retrieval rate.
+          Action if below: log failed retrievals for human follow-up.
+        - Multi-Source Balance: no single category dominates (>50%).
+          Action if below: suggest additional search directions.
 
-        4. PREDICTIVE OUTPUTS (COUNTRY TRAJECTORY)
-        Assess directional risk across these ten market predictions:
-        1. FX Entrapment Probability (12–24 months) — restrictions or delays in accessing FX,
-           repatriating profits, or exiting capital.
-        2. Sudden Regulatory Tightening Risk — abrupt licensing, pricing, or sector restrictions.
-        3. Contract Enforceability Deterioration — slower, politicized, or ignored courts and
-           arbitration enforcement.
-        4. Political Order Fragmentation Risk — elite splits, coalition breakdowns, or power
-           struggles that disrupt policy continuity.
-        5. Tax Extraction Surge Risk — aggressive audits, arbitrary penalties, or emergency levies.
-        6. Corridor Disruption Risk — sustained disruption of ports, borders, or highways.
-        7. Market Capture Escalation — politically connected firms expanding dominance.
-        8. Digital Trust Breakdown Risk — cyber incidents, breaches, or arbitrary data-access orders.
-        9. Commodity Governance Shock — export bans, windfall taxes, or contract renegotiations.
-        10. Country Trajectory Classification — Transitioning Market; High-Growth–High-Friction
-            Market; Captured Market; Operable Market; or Fragile Operability Market.
-        Each assessment must name dominant contributing signals and investor meaning
-        (capital lock-in, compliance shock, dispute-resolution structuring, logistics
-        contingency, cash-flow protection, fair-competition, fintech/cloud exposure,
-        extractives/agribusiness protection).
+        4. AI MODELING ARCHITECTURE
+        HSP employs an ensemble modeling approach, combining:
+        - Tree-based machine-learning models for non-linear pattern detection across
+          geopolitical, security, governance, and economic signals.
+        - Neural networks for interaction effects among HornScope domains.
+        - Time-series forecasting for conflict intensity, fiscal stress, prices, and displacement.
+        - Anomaly-detection algorithms for abrupt security, political, corridor, or cyber shocks.
+        - Network models of elite capture, regional alignment, and corridor exposure.
+        Individual model outputs are combined into a composite country-trajectory
+        assessment through ensemble weighting. Models are retrained on rolling windows,
+        back-tested against historical strategic shocks, and monitored for performance drift.
 
-        5. INTEGRATION WITH MARKET SYSTEM PILLARS
-        Trajectory risk is cross-referenced with AMIP pillar capacity to determine operational
-        vulnerability across FX, regulation, contracts, politics, tax, corridors, competition,
-        digital trust, and commodity governance. This converts prediction into actionable
-        investor and policymaker intelligence.
+        5. PREDICTION HORIZONS
+        - Near-term operational: 7-30 days
+        - Short-term: 1-4 weeks
+        - Medium-term: 1-3 months
+        - Strategic foresight: 12-24 months
 
-        6. HUMAN-IN-THE-LOOP VALIDATION
-        High-risk signals are reviewed by country and market experts prior to alert issuance.
-        Contextual filters address known data artifacts and seasonal/commodity-cycle norms.
-        False-positive controls are applied. Final alerts are released only after human
-        validation to preserve trust and minimize alert fatigue.
+        6. PREDICTIVE OUTPUTS (COUNTRY TRAJECTORY)
+        Assess directional risk across these ten HornScope predictions:
+        1. Geopolitical and regional-order risk - neighbour relations, external interference,
+           and loss of strategic autonomy.
+        2. Armed conflict and security escalation - organised violence, terrorism, unrest,
+           and erosion of the monopoly on legitimate force.
+        3. Governance and rule-of-law erosion - political instability, contested elections,
+           and weakening courts.
+        4. Macro-fiscal stress - revenue shortfalls, debt-service pressure, and public-finance
+           fragility.
+        5. Trade, infrastructure, and corridor disruption - ports, borders, highways, and
+           connectivity failures.
+        6. Social cohesion and human-development strain - demographic pressure, exclusion,
+           and service-delivery breakdown.
+        7. Climate and natural-resource shock - drought, flood, resource contestation, and
+           environmental stress.
+        8. Cyber, technology, and information-space breakdown - outages, surveillance,
+           disinformation, and narrative capture.
+        9. Humanitarian resilience failure - displacement, protection gaps, and weak shock
+           absorption.
+        10. Country Trajectory Classification - Strong; Functional; Strained; Weak; or Critical.
+        Each assessment must name dominant contributing signals and what they mean for
+        governments, intelligence, investors, and development partners in the Horn of Africa
+        and East Africa.
 
-        7. EVIDENCE HIERARCHY (priority order)
-        L1: National laws, central-bank circulars, budgets, audits, procurement, official
-            FX/customs/tax notices
-        L2: National market authorities, auditor-general, regulators, competition authorities
-        L3: IMF, World Bank, AfDB, regional economic communities, official IFI staff reports
-        L4: Peer-reviewed research, validated market-system and investment-climate assessments
-        L5: Chambers of commerce, industry associations, civil society, importer/bank reporting
+        7. INTEGRATION WITH HORNSCOPE PILLARS
+        Trajectory risk is cross-referenced with HSP pillar capacity across geopolitics,
+        security, governance, macroeconomy, trade and connectivity, society, climate,
+        technology, narratives, humanitarian resilience, and strategic foresight. This
+        converts prediction into actionable strategic intelligence.
+
+
+
+        8. EVIDENCE HIERARCHY (priority order)
+        L1: National laws, budgets, audits, treaties, official security and diplomatic notices
+        L2: National authorities, auditor-general, electoral bodies, regulators
+        L3: IMF, World Bank, AfDB, AU, IGAD, UN, and official IFI/REC staff reports
+        L4: Peer-reviewed research and validated strategic or investment-climate assessments
+        L5: Civil society, human-rights monitors, chambers, and local-governance reporting
         L6: Technical, satellite, logistics, and cyber-incident data
         L7: Media (context only, never primary)
         Rules:
         - ≥2 independent sources per claim
-        - No single-source scoring
+        - No single-source conclusions
         - Structural/operational evidence > perception
 
-        8. FOUR-LAYER EVIDENCE (ALL REQUIRED)
-        a) Structural (laws, institutions, FX/regulatory regimes, licensing)
-        b) Operational (budgets, enforcement, FX allocation, customs, tax administration)
-        c) Outcome (spreads, backlogs, contract awards, corridor throughput, measured results)
-        d) Perception (investor/importer/bank trust, grievance, social chatter)
+        9. FOUR-LAYER EVIDENCE (ALL REQUIRED)
+        a) Structural (laws, institutions, treaties, mandates, constitutional order)
+        b) Operational (budgets, enforcement, security operations, administration, customs)
+        c) Outcome (conflict incidents, displacement, growth, corridor throughput, measured results)
+        d) Perception (public trust, grievance, elite and social chatter)
         → Perception cannot override structural/operational evidence
 
-        9. DISTRIBUTIONAL ANALYSIS (MANDATORY)
-        Test for regional corridor gaps, formal vs informal market access, connected vs
-        independent firms, and urban vs hinterland operability. Severe capture or exclusion
-        = score reduction.
-
-        10. SCORING SCALE (FIXED)
-         4       = Strong and stress-resilient
-         3       = Functioning but uneven
-         2       = Mixed and vulnerable
-         1       = Structurally weak
-         0       = Absent or destabilizing
-         N/A     = Structurally irrelevant to this specific country or context
-         Unknown = Insufficient verifiable data (document as opacity risk — does NOT
-                    reduce the numeric score, but must be flagged)
+        10. DISTRIBUTIONAL ANALYSIS (MANDATORY)
+        Test for core vs hinterland gaps, corridor vs interior access, connected vs excluded
+        communities, and urban vs rural operability. Severe capture or exclusion
+        is a material structural weakness.
 
         11. DATA SILENCE RULE
-        - Assign "Unknown" when data cannot be verified
+        - Assign Indeterminate/N/A only for the unverifiable indicator, not the whole country
+        - Do NOT set ai_score or ai_progress to 0 because some sources are lagged or missing.
+          Unknown does not reduce a numeric score that other evidence already supports.
+        - 0 means verified absence or a destabilizing condition, not missing data.
         - State cause (conflict, suppression, incapacity, missing systems)
-        - Treat as governance risk — silence ≠ success
+        - Treat silence as governance risk — silence ≠ success
+        - Flag gaps in opacity_risk; still return a numeric country score from available evidence
 
         12. CONTINUOUS LEARNING AND QUALITY ASSURANCE
         - Quarterly back-testing and performance reporting
@@ -153,22 +164,23 @@ class HSPillarPrompts:
         - Prediction audit trail maintained
 
         13. DESIGN PHILOSOPHY
-        AMIP prioritizes early sensitivity for high-impact market shocks (FX lock-in,
-        regulatory surprise, corridor collapse, capture, commodity nationalism), accepting
-        limited false positives to minimize missed investor-critical events. The system
-        favors truthful uncertainty over artificial certainty, presenting probabilities
-        and confidence levels rather than binary claims.
+        HSP prioritizes early sensitivity for high-impact strategic shocks in the Horn of
+        Africa and East Africa (conflict escalation, governance rupture, corridor collapse,
+        climate compounding, humanitarian breakdown), accepting limited false positives to
+        minimize missed decision-critical events. The system favors truthful uncertainty
+        over artificial certainty, presenting probabilities and confidence levels rather
+        than binary claims.
 
         14. PROHIBITIONS
         Do NOT:
-        - Present deterministic market-crash or regime-change predictions without probability
+        - Present deterministic collapse or regime-change predictions without probability
           and confidence
         - Use rankings as analysis
-        - Reward opacity or missing official market data
+        - Reward opacity or missing official data
         - Accept claims without verification
         - Treat announced reforms as measured outcomes
         - Use media as primary evidence
-        - Frame analysis as public-health, outbreak, or clinical intelligence
+        - Frame analysis as clinical diagnosis; humanitarian and resilience analysis is in scope
 
         GLOBAL TERMINOLOGY RULE
         - Always refer to every assessment "Pillar" as a "Domain."
@@ -209,10 +221,10 @@ class HSPillarPrompts:
             f"PILLAR: {pillar_name}\n\n"
             f"DESCRIPTION:\n{desc}\n\n"
             f"ASSESSMENT GUIDANCE:\n"
-            f"Evaluate this pillar using the description above, the AMIP governance protocol, "
-            f"and verifiable market-system evidence for the target African country. "
-            f"Focus on structural capacity, operational delivery, measured investor/market "
-            f"outcomes, and fair-competition and market-access impacts."
+            f"Evaluate this pillar using the description above, the HSP governance protocol, "
+            f"and verifiable strategic evidence for the target Horn of Africa or East "
+            f"Africa country. Focus on structural capacity, operational delivery, "
+            f"measured outcomes, and equity of access across geography and communities."
         )
 
     @classmethod
@@ -255,7 +267,7 @@ class HSPillarPrompts:
         cls,
         pillars: Union[Mapping[int, PillarRecord], List[PillarRecord], None] = None,
     ) -> str:
-        """Compact AMIP pillar catalog for live pillar signals."""
+        """Compact HSP pillar catalog for live pillar signals."""
         pillar_map = cls._normalize_pillars(pillars)
         if not pillar_map:
             return "No active pillars configured."
@@ -287,50 +299,51 @@ class HSPillarPrompts:
         )
         catalog = cls.get_pillar_catalog_for_live_feed(pillar_map)
         example_id = pillar_ids[0] if pillar_ids else 1
-        example_name = (
-            str(pillar_map[example_id].get("PillarName", "market governance"))
-            if pillar_map
-            else "market governance"
-        )
-        example_query = example_name.lower().replace(" ", "+").replace(",", "")
 
         return f"""
-        You are the Africa Market Intelligence Platform (AMIP) live pillar intelligence engine.
+        You are the HornScope Platform (HSP) live pillar intelligence engine.
 
-        Produce a LIVE Africa-focused snapshot: exactly ONE card per active AMIP pillar.
-        Use the pillar definitions below to ground each card in the correct market domain.
+        Produce a LIVE HornScope-focused snapshot: exactly ONE card per active HSP pillar.
+        Use the pillar definitions below to ground each card in the correct HornScope domain.
 
         ==================================================
-        AMIP PILLAR CATALOG (ALL {pillar_count} — MANDATORY COVERAGE)
+        HSP PILLAR CATALOG (ALL {pillar_count} — MANDATORY COVERAGE)
         ==================================================
         {catalog}
 
         ==================================================
         MANDATORY: LIVE WEB SEARCH
         ==================================================
-        Before writing JSON, search credible African and global market news for each pillar domain.
-        For each pillar, find the most relevant signal from the LAST 48 HOURS affecting African
-        market systems. Older context only if an actively developing trend requires brief background.
+        Before writing JSON, search credible Horn of Africa and East Africa news for each pillar.
+        For each pillar, find the most relevant signal from the LAST 48 HOURS affecting
+        geopolitics, peace and security, governance, public finance, trade corridors,
+        society and human development, climate and natural resources, technology and cyber,
+        or regional strategic outlook. Older context only if an actively developing
+        conflict, diplomatic, fiscal, or humanitarian story requires brief background.
+
+        Prefer: Reuters, BBC, Al Jazeera, The East African, IGAD, African Union, UN/OCHA,
+        ReliefWeb, Crisis Group, IMF/World Bank/AfDB updates, and established regional
+        trackers. Do not invent article URLs.
 
         ==================================================
         sourceUrl RULES
         ==================================================
         - One HTTPS URL per pillar, copied exactly from search OR Google News search:
-          https://news.google.com/search?q=PILLAR+TOPIC+KEYWORDS+AFRICA+MARKET&hl=en-US&gl=US&ceid=US:en
-        - NEVER fabricate article slugs on Reuters, BBC, AP, WHO, Africa CDC, etc.
+          https://news.google.com/search?q=PILLAR+TOPIC+KEYWORDS+HORN+OF+AFRICA+OR+EAST+AFRICA&hl=en-US&gl=US&ceid=US:en
+        - NEVER fabricate article slugs on Reuters, BBC, Al Jazeera, UN, IGAD, AU, etc.
 
         ==================================================
         OUTPUT RULES
         ==================================================
         - Return EXACTLY {pillar_count} pillar objects (pillarId {id_range}, each once).
         - title: max 55 characters — headline-style.
-        - summary: max 100 characters — one clear market signal for this pillar.
+        - summary: max 100 characters — one clear strategic signal for this pillar.
         - type: "risk" or "trend" (lowercase).
         - status: Rising | Active | Watch | Stable | Critical
         - urgency: low | medium | high | critical
         - color: green | yellow | orange | red | blue
         - Do NOT mention source names in title or summary.
-        - headline/subHeadline: live 48-hour framing for African market intelligence.
+        - headline/subHeadline: live 48-hour framing for HornScope strategic intelligence.
         - updatedAt: current UTC ISO-8601.
 
 
@@ -338,17 +351,17 @@ class HSPillarPrompts:
         {{
             "updatedAt": "2026-05-25T12:00:00Z",
             "headline": "Live Pillar Signals",
-            "subHeadline": "African market intelligence pillar watch from the last 48 hours.",
+            "subHeadline": "HornScope pillar watch from the last 48 hours.",
             "pillars": [
                 {{
                     "pillarId": {example_id},
                     "type": "risk",
                     "title": "Short headline",
-                    "summary": "One sentence market signal for this pillar domain.",
+                    "summary": "One sentence strategic signal for this pillar domain.",
                     "status": "Watch",
                     "urgency": "medium",
                     "color": "yellow",
-                    "sourceUrl": "https://news.google.com/search?q={example_query}+africa+market&hl=en-US&gl=US&ceid=US:en"
+                    "sourceUrl": "https://news.google.com/search?q=Horn+of+Africa+OR+East+Africa+security&hl=en-US&gl=US&ceid=US:en"
                 }}
             ]
         }}

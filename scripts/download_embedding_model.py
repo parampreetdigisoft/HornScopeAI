@@ -5,7 +5,7 @@ Download all-MiniLM-L6-v2 for offline embedding use.
 Run once on a machine that can reach Hugging Face, then copy the output
 folder to the server (or run this script on the server if network allows).
 
-Usage (from Market_Intelligence_AI folder):
+Usage (from Hornscope_AI folder):
     python scripts/download_embedding_model.py
 """
 from pathlib import Path
@@ -35,7 +35,7 @@ def main() -> None:
     print(f"Saved to: {OUTPUT_DIR}")
     print()
     print("On the server, either:")
-    print("  1. Copy this folder to the same path under Market_Intelligence_AI, or")
+    print("  1. Copy this folder to the same path under Hornscope_AI, or")
     print("  2. Set EMBEDDING_MODEL_PATH in .env to the folder's absolute path")
 
 

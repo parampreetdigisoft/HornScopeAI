@@ -510,7 +510,7 @@ class HSPromptTemplates:
             "data_sources_count": <integer — EXACT count of DISTINCT sources actually used for THIS question. Must be 1, 2, 3, 4, or 5. Do NOT default to 3. One source → 1. Two sources → 2.>,
             "source_type": "<Primary Government|International Organization|Academic|NGO|Media>",
             "source_name": "<Organization or author name>",
-            "source_url": "<URL or 'Not available'>",
+            "source_url": "<Official organization domain or verified portal URL, e.g. 'https://au.int', 'https://data.worldbank.org'. NEVER hallucinate fake deep sub-paths.>",
             "source_data_year": <year as integer — actual year the data represents>,
             "reporting_lag": <integer — current target year minus source_data_year; 0 if current>,
             "data_quality_flag": "<Current|1-Year Lag|2-Year Lag|3-Year Lag|No Data>",
@@ -522,6 +522,7 @@ class HSPromptTemplates:
         - Prefer newest reporting year within a 5-year lookback (current year, then -1 … -4).
         - Within a year, prefer Primary Government > International Organization > Academic/NGO > Media.
         - reporting_lag = current target year - source_data_year; set data_quality_flag accordingly.
+        - For source_url: Provide the official domain or portal URL (e.g. 'https://au.int', 'https://www.imf.org', 'https://data.worldbank.org'). Do NOT invent fake deep sub-paths or file names.
         - Media / grey literature is fallback only when higher-trust sources are unavailable.
         - data_sources_count is the real number of distinct sources used, not a target.
           Do not pad to 3. Do not round to 3. High confidence requires 3+ sources;
@@ -678,7 +679,7 @@ class HSPromptTemplates:
                     {{
                         "source_type": "<Primary Government|International Organization|Academic|NGO|Media>",
                         "source_name": "<Organization or author name>",
-                        "source_url": "<URL or 'Not available'>",
+                        "source_url": "<Official organization domain or verified portal URL, e.g. 'https://au.int', 'https://data.worldbank.org'. NEVER hallucinate fake deep sub-paths.>",
                         "data_year": <integer — year the data represents>,
                         "reporting_lag": <integer — {y0} minus data_year; 0 if current>,
                         "data_quality_flag": "<Current|1-Year Lag|2-Year Lag|3-Year Lag|No Data>",
@@ -704,6 +705,7 @@ class HSPromptTemplates:
             - Search {y0} first; cascade only when that year is missing.
             - Every source MUST include: source_type, source_name, source_url, data_year,
               reporting_lag, data_quality_flag, source_trust_level, data_extract
+            - For source_url: Provide the official domain or portal URL (e.g. 'https://au.int', 'https://www.imf.org', 'https://data.worldbank.org'). Do NOT invent fake deep sub-paths or file names.
             - Prefer Primary Government > International > Academic/NGO > Media
             - Include 2 to 7 sources when available; if only 1, note limited corroboration in opacity_risk
             - Reflect verified real-time risks in ai_score, ai_progress, and red_flag

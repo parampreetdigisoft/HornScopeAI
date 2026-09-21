@@ -87,27 +87,42 @@ def build_google_news_search_url(country: str, title: str) -> str:
         "&hl=en-US&gl=US&ceid=US:en"
     )
 
+def build_google_search_url(query_text: str) -> str:
+    """Public Google Search URL — stable fallback redirect for reports and citations."""
+    query = quote_plus(query_text.strip())
+    return f"https://www.google.com/search?q={query}"
+
+
 async def is_url_live(url: str) -> bool:
-    """Return True if the URL responds without 404/410."""
-    if not url or not url.startswith(("http://", "https://")):
+    """Return True if the URL responds without 404/410/connection error."""
+    if not url or not isinstance(url, str) or not url.startswith(("http://", "https://")):
+        return False
+
+    clean_url = url.strip()
+    lowered = clean_url.lower()
+
+    # Reject obvious placeholders
+    if any(p in lowered for p in ("not available", "placeholder", "example.com", "unknown")):
         return False
 
     try:
         async with httpx.AsyncClient(
             follow_redirects=True,
-            timeout=10.0,
+            timeout=5.0,
+            verify=False,
         ) as client:
-            response = await client.head(url, headers=_DEFAULT_HEADERS)
-            if response.status_code == 405:
-                response = await client.get(url, headers=_DEFAULT_HEADERS)
+            response = await client.head(clean_url, headers=_DEFAULT_HEADERS)
+            if response.status_code in (405, 403, 400):
+                response = await client.get(clean_url, headers=_DEFAULT_HEADERS)
 
             if response.status_code in (404, 410):
                 return False
             if response.status_code < 400:
                 return True
+
             # Some publishers block bots with 403 but pages exist in browsers.
             if response.status_code == 403:
-                host = urlparse(url).netloc.lower()
+                host = urlparse(clean_url).netloc.lower()
                 if any(
                     trusted in host
                     for trusted in (
@@ -117,31 +132,50 @@ async def is_url_live(url: str) -> bool:
                         "apnews.com",
                         "theguardian.com",
                         "aljazeera.com",
+                        "worldbank.org",
+                        "imf.org",
+                        "un.org",
+                        "au.int",
                     )
                 ):
                     return True
+
             return False
-    except httpx.HTTPError as exc:
-        logger.debug("URL check failed for %s: %s", url, exc)
+    except Exception as exc:
+        logger.debug("URL check failed for %s: %s", clean_url, exc)
         return False
 
 
 async def ensure_live_source_url(
-    url: str,
+    url: Optional[str],
     country: str,
     title: str,
+    source_type: Optional[str] = None,
 ) -> str:
     """
-    Keep the URL if it loads; otherwise return a Google News search for the story.
+    Keep the URL if it loads; otherwise return a targeted search redirect link.
+    For Media sources, uses Google News search.
+    For Official, Academic, NGO, and other sources, uses Google Search.
     """
-    if await is_url_live(url):
-        return url
+    if url and await is_url_live(url):
+        return url.strip()
 
-    fallback = build_google_news_search_url(country, title)
-    logger.warning(
-        "Replacing dead source URL for %s: %s -> %s",
-        country,
-        url,
-        fallback,
-    )
+    # Build safe search redirect
+    clean_country = (country or "").strip()
+    clean_title = (title or "").strip()
+    query_text = f"{clean_country} {clean_title}".strip() or "Horn of Africa assessment"
+
+    st_lower = (source_type or "").lower()
+    if "media" in st_lower or "news" in st_lower:
+        fallback = build_google_news_search_url(clean_country, clean_title)
+    else:
+        fallback = build_google_search_url(query_text)
+
+    if url:
+        logger.warning(
+            "Replacing dead source URL (%s): %s -> %s",
+            query_text,
+            url,
+            fallback,
+        )
     return fallback

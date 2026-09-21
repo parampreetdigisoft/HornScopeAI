@@ -55,22 +55,17 @@ class HSPillarPrompts:
         4. Retrieve and download documents in original format.
         5. Parse and process documents using layout-aware parsing and extraction.
         6. Store processed documents in a vector database for evidence retrieval.
-        7. Generate a Discovery Report listing all sources found with metadata.
+        7. Generate a "Discovery Report" listing all sources found with metadata.
         8. Flag missing or unavailable sources for human follow-up (Stage 2).
 
         3. DISCOVERY QUALITY ASSURANCE
         Apply these targets before using sources in an assessment. If a metric is
         below target, take the stated action:
-        - Source Coverage: ≥90% of known relevant sources.
-          Action if below: AI re-runs search with alternative queries.
-        - Source Freshness: sources from within the last 12 months.
-          Action if below: flag older sources for human review.
-        - Source Authority: ≥80% from high-authority sources.
-          Action if below: flag low-authority sources for human verification.
-        - Document Retrieval: ≥95% retrieval rate.
-          Action if below: log failed retrievals for human follow-up.
-        - Multi-Source Balance: no single category dominates (>50%).
-          Action if below: suggest additional search directions.
+        - Source Coverage: ≥90% of known relevant sources (Action if below: AI re-runs search with alternative queries).
+        - Source Freshness: Sources from within last 12 months (Action if below: Flag older sources for human review).
+        - Source Authority: ≥80% from high-authority sources (Action if below: Flag low-authority sources for human verification).
+        - Document Retrieval: ≥95% retrieval rate (Action if below: Log failed retrievals for human follow-up).
+        - Multi-Source Balance: No single category dominates (>50%) (Action if below: Suggest additional search directions).
 
         4. AI MODELING ARCHITECTURE
         HSP employs an ensemble modeling approach, combining:
@@ -120,8 +115,6 @@ class HSPillarPrompts:
         security, governance, macroeconomy, trade and connectivity, society, climate,
         technology, narratives, humanitarian resilience, and strategic foresight. This
         converts prediction into actionable strategic intelligence.
-
-
 
         8. EVIDENCE HIERARCHY (priority order)
         L1: National laws, budgets, audits, treaties, official security and diplomatic notices

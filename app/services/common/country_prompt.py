@@ -1869,13 +1869,15 @@ class HSPromptTemplates:
     # long OR-chains and sourcecountry filters are rejected as HTTP 429.
     GDELT_EMERGING_KEYWORD_VARIANTS: Tuple[Tuple[str, ...], ...] = (
         ("conflict",),
-        ("refugee",),
-        ("election",),
-        ("border",),
-        ("drought",),
-        ("cyber",),
+        ("military",),
         ("security",),
+        ("election",),
+        ("political crisis",),
+        ("protest",),
+        ("border",),
         ("trade",),
+        ("sanctions",),
+        ("economic crisis",),
     )
 
     @staticmethod
@@ -1919,7 +1921,7 @@ class HSPromptTemplates:
     @staticmethod
     def _gdelt_emerging_query_string(keywords: Sequence[str]) -> str:
         keyword = next((k.strip().split()[0] for k in keywords if k and k.strip()), "conflict")
-        return f"{keyword} africa"
+        return f"{keyword} AND africa sourcelang:eng"
 
     @staticmethod
     def emerging_trends_gdelt_url(

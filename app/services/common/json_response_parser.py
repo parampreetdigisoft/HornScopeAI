@@ -26,8 +26,8 @@ def clean_json_response(response: str) -> str:
     Strip markdown fences and extract a well-formed JSON value
     from a raw LLM response string.
 
-    If the model emits extra keys after the first object closes
-    (common Extra data error), those trailing fields are merged in.
+    If the model emits extra content after the first object closes
+    (common Extra data error), trailing content is ignored.
 
     Raises:
         ValueError: if no valid JSON object can be recovered.
@@ -42,11 +42,10 @@ def clean_json_response(response: str) -> str:
         response = response.strip()
 
     start = response.find("{")
-    end = response.rfind("}")
-    if start == -1 or end == -1:
+    if start == -1:
         raise ValueError("No valid JSON object found in LLM response.")
 
-    json_str = response[start : end + 1]
+    json_str = response[start:]
 
     # Normalise typographic characters
     json_str = (
@@ -63,8 +62,19 @@ def clean_json_response(response: str) -> str:
 
     # First parse attempt
     try:
-        json.loads(json_str)
-        return json_str
+        decoder = json.JSONDecoder()
+        obj, end = decoder.raw_decode(json_str)
+        if not isinstance(obj, dict):
+            raise json.JSONDecodeError("Top-level JSON must be an object", json_str, 0)
+
+        trailing = json_str[end:].strip()
+        if trailing:
+            logger.warning(
+                "Ignoring trailing non-JSON content after top-level object (%d chars).",
+                len(trailing),
+            )
+
+        return json.dumps(obj, ensure_ascii=False)
     except json.JSONDecodeError as e:
         logger.warning(
             "Initial JSON parse failed at pos %d: %s", e.pos, e.msg
@@ -74,9 +84,21 @@ def clean_json_response(response: str) -> str:
     # Attempt auto-fix
     fixed = _fix_json_escaping(json_str)
     try:
-        json.loads(fixed)
+        decoder = json.JSONDecoder()
+        repaired_obj, end = decoder.raw_decode(fixed)
+        if not isinstance(repaired_obj, dict):
+            raise json.JSONDecodeError("Top-level JSON must be an object", fixed, 0)
+
+        trailing = fixed[end:].strip()
+        if trailing:
+            logger.warning(
+                "Ignoring trailing non-JSON content after repaired top-level object (%d chars).",
+                len(trailing),
+            )
+
+        repaired = json.dumps(repaired_obj, ensure_ascii=False)
         logger.info("JSON successfully repaired.")
-        return fixed
+        return repaired
     except json.JSONDecodeError as e2:
         logger.error(
             "JSON repair failed at pos %d: %s\nFirst 500 chars:\n%s",

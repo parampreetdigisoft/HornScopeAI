@@ -647,6 +647,33 @@ class RAGQueryService:
                 "error": str(exc),
             }
 
+    async def pillar_overview(self, pillars: Dict[int, Dict[str, Any]]) -> Dict[str, Any]:
+        try:
+            now_utc = datetime.now(timezone.utc)
+            raw = await self._llm_svc.invoke_chain(
+                system_prompt = HSPillarPrompts.pillar_overview_prompt(pillars),
+                user_template = HSPillarPrompts.pillar_overview_user_prompt(),
+                variables = {"current_date": now_utc.strftime("%Y-%m-%dT%H:%M:%SZ")},
+                label="pillar-overview",
+                max_tokens=16000,
+            )
+
+            analysis = json.loads(jrp.clean_json_response(raw))
+            if not analysis.get("updatedAt"):
+                analysis["updatedAt"] = now_utc.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+            return {
+                "success": True,
+                "data": analysis,
+            }
+
+        except Exception as exc:
+            logger.exception("pillar_overview failed")
+            return {
+                "success": False,
+                "error": str(exc),
+            }
+
 
     # ------------------------------------------------------------------ #
     #  Helpers                                                            #

@@ -21,6 +21,7 @@ from app.services.common.kpi_summary_prompt import (
 )
 from app.view_models.EmergingTrendsResult import EmergingTrendsResult
 from app.view_models.PillarLiveSignalsResult import PillarLiveSignalsResult
+from app.view_models.PillarOverviewResult import PillarOverviewResult
 from app.view_models.KpiSummaryRequest import KpiSummaryRequest, KpiSummaryResult
 from app.services.common.url_verifier import ensure_live_source_url
 logger = logging.getLogger(__name__)
@@ -570,6 +571,32 @@ class ChatService:
 
         data["pillars"] = verified
         return data
+
+    async def get_pillar_overview(self) -> Dict[str, Any]:
+        try:
+            pillars = await self._db.get_active_pillars_map()
+            if not pillars:
+                return {"success": False, "message": "No active pillars configured"}
+
+            ai_result = await rag_query_service.pillar_overview(pillars)
+            if not ai_result.get("success"):
+                return {"success": False, "message": "Failed to generate pillar overview"}
+
+            validated = PillarOverviewResult.model_validate(ai_result["data"])
+            return {
+                "success": True,
+                "message": "Pillar overview generated successfully",
+                "result": validated.model_dump(),
+            }
+        except ValidationError as exc:
+            logger.warning("Pillar overview response failed validation: %s", exc)
+            return {
+                "success": False,
+                "message": "Pillar overview response did not meet quality checks",
+            }
+        except Exception as exc:
+            logger.exception("get_pillar_overview failed")
+            return {"success": False, "message": str(exc)}
 
     async def summarize_kpi_performance(
         self,

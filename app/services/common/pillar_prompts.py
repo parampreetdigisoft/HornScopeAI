@@ -362,3 +362,50 @@ class HSPillarPrompts:
         {_PILLAR_FEED_OUTPUT_STYLE}
         {_PILLAR_FEED_JSON_RULES}
         """
+
+    @classmethod
+    def pillar_overview_prompt(
+        cls,
+        pillars: Union[Mapping[int, PillarRecord], List[PillarRecord], None] = None,
+    ) -> str:
+        """One summary paragraph and improvement points for each active pillar."""
+        pillar_map = cls._normalize_pillars(pillars)
+        pillar_count = len(pillar_map)
+        catalog = cls.get_pillar_catalog_for_live_feed(pillar_map)
+        example_id = min(pillar_map.keys()) if pillar_map else 1
+
+        return f"""
+        You are the HornScope public domain overview engine.
+        Return exactly one entry for each of the {pillar_count} pillars below.
+        summary: one paragraph. Name the leading Horn of Africa or East Africa countries in that paragraph.
+        areasForImprovement: two or three sentences on the main areas for improvement.
+        Do not add a leaders list or any field other than pillarId, pillarName, summary, and areasForImprovement.
+        Do not invent countries outside that region. No bullet lists inside JSON strings.
+
+        PILLARS:
+        {catalog}
+
+        JSON format:
+        {{
+            "pillars": [
+                {{
+                    "pillarId": {example_id},
+                    "pillarName": "Name of the pillar",
+                    "summary": "One paragraph on this domain.",
+                    "areasForImprovement": "Two or three sentences on the main areas for improvement."
+                }}
+            ]
+        }}
+
+        {_PILLAR_FEED_OUTPUT_STYLE}
+        {_PILLAR_FEED_JSON_RULES}
+        """
+
+    @staticmethod
+    def pillar_overview_user_prompt() -> str:
+        return """
+        Current UTC datetime (now):
+        {current_date}
+
+        Write the domain overview JSON now.
+        """.strip()

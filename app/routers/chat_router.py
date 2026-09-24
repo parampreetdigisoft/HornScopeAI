@@ -10,6 +10,7 @@ from app.view_models.ChatRequest import ChatCountryExecutiveSlidesRequest, ChatC
 from app.view_models.AnalysisRequest import ChatResponse
 from app.view_models.EmergingTrendsResult import ChatEmergingTrendsResponse
 from app.view_models.PillarLiveSignalsResult import ChatPillarLiveSignalsResponse
+from app.view_models.PillarOverviewResult import ChatPillarOverviewResponse
 from app.view_models.KpiSummaryRequest import KpiSummaryRequest, KpiSummaryResponse, KpiSummaryResult
 logger = logging.getLogger(__name__)
 from app.services.chat_service import chat_service
@@ -277,6 +278,42 @@ async def get_pillar_live_signals():
     except Exception as e:
         logger.error(
             f"Error in pillar live signals API: {str(e)}",
+            exc_info=True,
+        )
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get(
+    "/pillar-overview",
+    response_model=ChatPillarOverviewResponse,
+    summary="HornScope pillar overview (summary and improvements)",
+)
+async def get_pillar_overview():
+    """
+    Public overview: for each active pillar, a one-paragraph summary that names
+    the leading countries, and two or three sentences on the main areas for improvement.
+    """
+    try:
+        response = await chat_service.get_pillar_overview()
+
+        if not response.get("success"):
+            raise HTTPException(
+                status_code=502,
+                detail=response.get("message", "Failed to generate pillar overview"),
+            )
+
+        return ChatPillarOverviewResponse(
+            success=True,
+            message=response["message"],
+            result=response["result"],
+        )
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        logger.error(
+            f"Error in pillar overview API: {str(e)}",
             exc_info=True,
         )
         raise HTTPException(status_code=500, detail=str(e))

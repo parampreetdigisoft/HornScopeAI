@@ -472,7 +472,7 @@ class HSPromptTemplates:
         6. Apply the SCORING RULE above, including the absence-of-evidence
            guidance, to pick the final option.
 
-        **CONFIDENCE LEVELS** (set only from data_sources_count — reporting lag does not change this):
+        **CONFIDENCE LEVELS** (set only from data_sources_count):
         - High: data_sources_count is 3 or more high-quality sources, recent, cross-verified.
         - Medium: data_sources_count is exactly 2.
         - Low: data_sources_count is 0 or 1.
@@ -514,8 +514,6 @@ class HSPromptTemplates:
             "source_name": "<Organization or author name>",
             "source_url": "<Official organization domain or verified portal URL, e.g. 'https://au.int', 'https://data.worldbank.org'. NEVER hallucinate fake deep sub-paths.>",
             "source_data_year": <year as integer — actual year the data represents>,
-            "reporting_lag": <integer — current target year minus source_data_year; 0 if current>,
-            "data_quality_flag": "<Current|1-Year Lag|2-Year Lag|3-Year Lag|No Data>",
             "source_trust_level": <1-7 — Primary Government 1-2, International Organization 3, Academic 4, NGO 5, Media/Grey 6-7>,
             "source_data_extract": "<The specific data point or finding, 1-2 sentences.>"
         }}
@@ -523,7 +521,6 @@ class HSPromptTemplates:
         DATA SOURCING (apply to source fields above):
         - Prefer newest reporting year within a 5-year lookback (current year, then -1 … -4).
         - Within a year, prefer Primary Government > International Organization > Academic/NGO > Media.
-        - reporting_lag = current target year - source_data_year; set data_quality_flag accordingly.
         - For source_url: Provide the official domain or portal URL (e.g. 'https://au.int', 'https://www.imf.org', 'https://data.worldbank.org'). Do NOT invent fake deep sub-paths or file names.
         - Media / grey literature is fallback only when higher-trust sources are unavailable.
         - data_sources_count is the real number of distinct sources used, not a target.
@@ -564,11 +561,8 @@ class HSPromptTemplates:
             {y0} → {y1} → {y2} → {y3} → {y4}. Use the newest year found. Do not go older than {y4}.
             Within a year prefer: Primary Government > International Organization > Academic/NGO > Media (fallback only).
 
-            For every source compute against Target Year {y0}:
-            - data_year = year the data represents
-            - reporting_lag = {y0} - data_year
-            - data_quality_flag: 0=Current, 1=1-Year Lag, 2=2-Year Lag, >=3=3-Year Lag, none in window=No Data
-            Lag note in data_extract only when reporting_lag > 0. Prefer {y0} evidence; do not default to older years when newer exists.
+            For every source, data_year is the year the data represents.
+            Prefer {y0} evidence; do not default to older years when newer exists.
 
             YOUR MANDATORY PROCESS (execute in full — no shortcuts):
             Step 1:  Establish temporal scope — what is the evidence range? Note pre-1950 roots
@@ -593,7 +587,7 @@ class HSPromptTemplates:
                      undermined by weakness in a dependent domain.
             Step 12: Assign final score using the seven-level grid.
             Step 13: Provide sources — return 1-7 sources with all required fields. Prefer newest
-                     year and highest-trust type. If nothing in {y4}-{y0}, use data_quality_flag "No Data".
+                     year and highest-trust type. If nothing in {y4}-{y0}, say so in data_extract.
 
             REAL-TIME EARLY WARNING PROTOCOL (MANDATORY):
             The AI scoring system must explicitly integrate real-time and near real-time
@@ -683,10 +677,8 @@ class HSPromptTemplates:
                         "source_name": "<Organization or author name>",
                         "source_url": "<Official organization domain or verified portal URL, e.g. 'https://au.int', 'https://data.worldbank.org'. NEVER hallucinate fake deep sub-paths.>",
                         "data_year": <integer — year the data represents>,
-                        "reporting_lag": <integer — {y0} minus data_year; 0 if current>,
-                        "data_quality_flag": "<Current|1-Year Lag|2-Year Lag|3-Year Lag|No Data>",
                         "source_trust_level": <1-7 — Primary Government 1-2, International Organization 3, Academic 4, NGO 5, Media 6-7>,
-                        "data_extract": "<5-100 words. Finding used from this source. If reporting_lag>0, start with one short lag note only.>"
+                        "data_extract": "<5-100 words. Finding used from this source.>"
                     }}
                 ],
                "temporal_reliability": "<50-100 words. Evidence timeframe and whether sources are current enough for this pillar.>",
@@ -703,10 +695,9 @@ class HSPromptTemplates:
             }}
 
             **CRITICAL RULES:**
-            - Target Year is {y0}. reporting_lag and data_quality_flag MUST be relative to {y0}.
-            - Search {y0} first; cascade only when that year is missing.
+            - Target Year is {y0}. Search {y0} first; cascade only when that year is missing.
             - Every source MUST include: source_type, source_name, source_url, data_year,
-              reporting_lag, data_quality_flag, source_trust_level, data_extract
+              source_trust_level, data_extract
             - For source_url: Provide the official domain or portal URL (e.g. 'https://au.int', 'https://www.imf.org', 'https://data.worldbank.org'). Do NOT invent fake deep sub-paths or file names.
             - Prefer Primary Government > International > Academic/NGO > Media
             - Include 2 to 7 sources when available; if only 1, note limited corroboration in opacity_risk

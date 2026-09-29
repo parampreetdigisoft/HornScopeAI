@@ -119,7 +119,7 @@ class ChatService:
             query = f"""
                 SELECT CountryName, Continent
                 FROM Countries
-                WHERE CountryID IN ({",".join(map(str, countryIDs))})
+                WHERE ISDELETED = 0 AND CountryID IN ({",".join(map(str, countryIDs))})
             """
 
             countries = await self._db.engine.fetch_dicts_async(query)

@@ -527,25 +527,10 @@ class ScoreAnalyzerService:
         """Expand the Sources list from a pillar AI response into flat DB records."""
         records: list[dict] = []
         target_year = self._to_int(ai.get("Year")) or datetime.now().year
-        sources = apply_data_sourcing_to_sources(ai.get("Sources", []), target_year)
+        sources = apply_data_sourcing_to_sources(ai.get("Sources", []))
 
         for src in sources:
             extract = (src.get("data_extract") or "").strip()
-            quality_flag = (src.get("data_quality_flag") or "").strip()
-            reporting_lag = src.get("reporting_lag")
-
-            # Single compact metadata prefix (values already recomputed vs Target Year)
-            meta_parts: list[str] = []
-            if quality_flag and quality_flag != "Current":
-                meta_parts.append(f"[{quality_flag}]")
-            if (
-                reporting_lag is not None
-                and str(reporting_lag).strip() != ""
-                and int(reporting_lag) > 0
-            ):
-                meta_parts.append(f"[Reporting Lag: {reporting_lag}]")
-            if meta_parts and not extract.startswith("["):
-                extract = f"{' '.join(meta_parts)} {extract}".strip()
 
             records.append(
                 {

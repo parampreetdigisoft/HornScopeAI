@@ -45,7 +45,6 @@ _PILLAR_USER_TMPL = """
     Target Year: {year}
 
     Search Target Year {year} first, then cascade back only if needed (up to 4 prior years).
-    Compute reporting_lag and data_quality_flag relative to Target Year {year}.
     Return ONLY valid JSON.
 """
 

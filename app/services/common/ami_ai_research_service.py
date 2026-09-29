@@ -32,6 +32,9 @@ _QUESTION_USER_TMPL = """
     Question: {question_text}
     Year: {year}
 
+    confidence_level: High when data_sources_count is 3 or more, Low when it is 0 or 1,
+    Medium only when it is exactly 2. Do not set every question to Medium.
+
     Return ONLY valid JSON.
 """
 

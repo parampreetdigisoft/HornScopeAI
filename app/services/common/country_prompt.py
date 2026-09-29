@@ -472,18 +472,20 @@ class HSPromptTemplates:
         6. Apply the SCORING RULE above, including the absence-of-evidence
            guidance, to pick the final option.
 
-        **CONFIDENCE LEVELS**:
-        - High: 3+ high-quality sources, recent, cross-verified
-        - Medium: At least 2 credible sources, partial verification
-        - Low: Limited, indirect, dated, proxy, or single-source evidence
+        **CONFIDENCE LEVELS** (set only from data_sources_count — reporting lag does not change this):
+        - High: data_sources_count is 3 or more high-quality sources, recent, cross-verified.
+        - Medium: data_sources_count is exactly 2.
+        - Low: data_sources_count is 0 or 1.
         - N/A: question is structurally irrelevant (ai_score is null)
         - Indeterminate: evidence cannot be verified (ai_score is null)
+        If you are about to write Medium, recount the sources first.
+        Do not return Medium for every question.
 
         Rule:
         - If ai_score is 0, 25, 50, 75, or 100 → confidence_level MUST be
           High, Medium, or Low. Never N/A or Indeterminate.
         - If ai_score is 0 → confidence_level is Low, Medium, or High from
-          evidence quality — never N/A or Indeterminate.
+          the source count — never N/A or Indeterminate.
         - If ai_score is null → confidence_level MUST be "N/A" or "Indeterminate"
 
         OUTPUT: Return ONLY this exact JSON object (no markdown, no extra text):
@@ -650,7 +652,7 @@ class HSPromptTemplates:
             (a) current structural conditions
             (b) emerging forward-looking risks
 
-            CONFIDENCE LEVELS (from ai_score on the 0-100 scale):
+            CONFIDENCE LEVELS (from ai_score on the 0-100 scale — do not default to Medium):
             - High: ai_score 75-100
             - Medium: ai_score 50-74.99
             - Low: ai_score 0-49.99
@@ -1907,6 +1909,28 @@ class HSPromptTemplates:
             if codes
         )
         return tuple(all_codes), region_groups
+
+    @staticmethod
+    def selected_country_names(countries: Sequence[Dict[str, Any]]) -> Tuple[str, ...]:
+        """CountryName values from Countries rows (CountryID, CountryName)."""
+        names: List[str] = []
+        seen = set()
+        for row in countries:
+            name = str(row.get("CountryName") or row.get("countryname") or "").strip()
+            key = name.casefold()
+            if not name or key in seen:
+                continue
+            seen.add(key)
+            names.append(name)
+        return tuple(names)
+
+    @staticmethod
+    def format_selected_countries(countries: Sequence[Dict[str, Any]]) -> str:
+        """Comma-separated CountryName list for prompts. Names only, no SQL."""
+        names = HSPromptTemplates.selected_country_names(countries)
+        if not names:
+            return "No countries are configured."
+        return ", ".join(names)
 
     @staticmethod
     def gdelt_emerging_variant_count() -> int:

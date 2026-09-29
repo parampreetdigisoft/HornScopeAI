@@ -185,6 +185,7 @@ def validate_question_response(data: Dict) -> Dict:
         ],
     )
     _validate_ai_score(data)
+    _align_question_score_fields(data)
     _validate_confidence(data)
     return data
 
@@ -526,6 +527,38 @@ def _with_sourcing_meta(
     if meta_parts and not text.startswith("["):
         return f"{' '.join(meta_parts)} {text}".strip()
     return text
+
+
+def _as_int(value: Any) -> Optional[int]:
+    if value is None or isinstance(value, bool):
+        return None
+    try:
+        return int(float(value))
+    except (TypeError, ValueError):
+        return None
+
+
+def _align_question_score_fields(data: Dict) -> None:
+    """Confidence follows SourcesConsulted. The model chooses ai_score."""
+    score = data.get("ai_score")
+    if not isinstance(score, (int, float)) or isinstance(score, bool):
+        level = str(data.get("confidence_level") or "").strip()
+        if level not in {"N/A", "NA", "Indeterminate"}:
+            data["confidence_level"] = "Indeterminate"
+        return
+
+    count = _as_int(data.get("data_sources_count"))
+    if count is None:
+        level = str(data.get("confidence_level") or "").strip()
+        if level not in {"High", "Medium", "Low"}:
+            data["confidence_level"] = "Low"
+        return
+    if count >= 3:
+        data["confidence_level"] = "High"
+    elif count <= 1:
+        data["confidence_level"] = "Low"
+    else:
+        data["confidence_level"] = "Medium"
 
 
 def _validate_ai_score(data: Dict) -> None:

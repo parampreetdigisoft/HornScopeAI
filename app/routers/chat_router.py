@@ -255,7 +255,8 @@ async def get_emerging_trends_and_issues(
 )
 async def get_pillar_live_signals():
     """
-    Public feed: one concise live signal per active HornScope pillar.
+    Public feed: one concise live signal per active HornScope pillar,
+    limited to the configured country names.
     """
     try:
         response = await chat_service.get_pillar_live_signals()

@@ -602,7 +602,13 @@ class RAGQueryService:
                 if pillar_count > 1
                 else str(pillar_ids[0]) if pillar_ids else "none"
             )
-            system_prompt = HSPillarPrompts.pillar_live_signals_prompt(pillars)
+            countries = await self._db.get_active_countries()
+            if not HSPromptTemplates.selected_country_names(countries):
+                raise ValueError("No selected countries configured")
+            selected_countries = HSPromptTemplates.format_selected_countries(countries)
+            system_prompt = HSPillarPrompts.pillar_live_signals_prompt(
+                pillars, selected_countries
+            )
 
             user_template = f"""
             Generate the LIVE HS pillar signals feed (all {pillar_count} active pillars).
@@ -612,6 +618,9 @@ class RAGQueryService:
 
             Live coverage window start (48 hours before now):
             {{recency_cutoff}}
+
+            Countries: {{selected_countries}}
+            Name these countries. Do not say Africa, the continent, or Horn of Africa instead.
 
             Requirements:
             - Exactly {pillar_count} entries: pillarId {id_range}, each once.
@@ -628,6 +637,7 @@ class RAGQueryService:
                     "recency_cutoff": (now_utc - timedelta(hours=48)).strftime(
                         "%Y-%m-%dT%H:%M:%SZ"
                     ),
+                    "selected_countries": selected_countries,
                 },
                 label="pillar-live-signals",
             )
@@ -649,11 +659,20 @@ class RAGQueryService:
 
     async def pillar_overview(self, pillars: Dict[int, Dict[str, Any]]) -> Dict[str, Any]:
         try:
+            countries = await self._db.get_active_countries()
+            if not HSPromptTemplates.selected_country_names(countries):
+                raise ValueError("No selected countries configured")
+            selected_countries = HSPromptTemplates.format_selected_countries(countries)
             now_utc = datetime.now(timezone.utc)
             raw = await self._llm_svc.invoke_chain(
-                system_prompt = HSPillarPrompts.pillar_overview_prompt(pillars),
+                system_prompt = HSPillarPrompts.pillar_overview_prompt(
+                    pillars, selected_countries
+                ),
                 user_template = HSPillarPrompts.pillar_overview_user_prompt(),
-                variables = {"current_date": now_utc.strftime("%Y-%m-%dT%H:%M:%SZ")},
+                variables = {
+                    "current_date": now_utc.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                    "selected_countries": selected_countries,
+                },
                 label="pillar-overview",
                 max_tokens=16000,
             )

@@ -281,6 +281,7 @@ class HSPillarPrompts:
     def pillar_live_signals_prompt(
         cls,
         pillars: Union[Mapping[int, PillarRecord], List[PillarRecord], None] = None,
+        selected_countries: str = "",
     ) -> str:
         pillar_map = cls._normalize_pillars(pillars)
         pillar_ids = sorted(pillar_map.keys())
@@ -299,6 +300,9 @@ class HSPillarPrompts:
         Produce a LIVE HornScope-focused snapshot: exactly ONE card per active HSP pillar.
         Use the pillar definitions below to ground each card in the correct HornScope domain.
 
+        Countries: {selected_countries or "No countries are configured."}
+        Name these countries. Do not say Africa, the continent, or Horn of Africa instead.
+
         ==================================================
         HSP PILLAR CATALOG (ALL {pillar_count} — MANDATORY COVERAGE)
         ==================================================
@@ -307,7 +311,7 @@ class HSPillarPrompts:
         ==================================================
         MANDATORY: LIVE WEB SEARCH
         ==================================================
-        Before writing JSON, search credible Horn of Africa and East Africa news for each pillar.
+        Before writing JSON, search credible news about the countries named above for each pillar.
         For each pillar, find the most relevant signal from the LAST 48 HOURS affecting
         geopolitics, peace and security, governance, public finance, trade corridors,
         society and human development, climate and natural resources, technology and cyber,
@@ -322,7 +326,7 @@ class HSPillarPrompts:
         sourceUrl RULES
         ==================================================
         - One HTTPS URL per pillar, copied exactly from search OR Google News search:
-          https://news.google.com/search?q=PILLAR+TOPIC+KEYWORDS+HORN+OF+AFRICA+OR+EAST+AFRICA&hl=en-US&gl=US&ceid=US:en
+          https://news.google.com/search?q=PILLAR+TOPIC+KEYWORDS+COUNTRY+NAMES&hl=en-US&gl=US&ceid=US:en
         - NEVER fabricate article slugs on Reuters, BBC, Al Jazeera, UN, IGAD, AU, etc.
 
         ==================================================
@@ -367,20 +371,25 @@ class HSPillarPrompts:
     def pillar_overview_prompt(
         cls,
         pillars: Union[Mapping[int, PillarRecord], List[PillarRecord], None] = None,
+        selected_countries: str = "",
     ) -> str:
         """One summary paragraph and improvement points for each active pillar."""
         pillar_map = cls._normalize_pillars(pillars)
         pillar_count = len(pillar_map)
         catalog = cls.get_pillar_catalog_for_live_feed(pillar_map)
         example_id = min(pillar_map.keys()) if pillar_map else 1
+        country_block = selected_countries or "No countries are configured."
 
         return f"""
         You are the HornScope public domain overview engine.
         Return exactly one entry for each of the {pillar_count} pillars below.
-        summary: one paragraph. Name the leading Horn of Africa or East Africa countries in that paragraph.
+        summary: one paragraph. Name the countries below in that paragraph.
         areasForImprovement: two or three sentences on the main areas for improvement.
         Do not add a leaders list or any field other than pillarId, pillarName, summary, and areasForImprovement.
-        Do not invent countries outside that region. No bullet lists inside JSON strings.
+        Do not invent countries outside that list. No bullet lists inside JSON strings.
+
+        Countries: {country_block}
+        Name these countries. Do not say Africa, the continent, or Horn of Africa instead.
 
         PILLARS:
         {catalog}
@@ -406,6 +415,9 @@ class HSPillarPrompts:
         return """
         Current UTC datetime (now):
         {current_date}
+
+        Countries: {selected_countries}
+        Name these countries. Do not say Africa, the continent, or Horn of Africa instead.
 
         Write the domain overview JSON now.
         """.strip()

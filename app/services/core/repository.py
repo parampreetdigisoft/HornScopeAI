@@ -327,7 +327,7 @@ class DatabaseRepository:
         return {int(p["PillarID"]): p for p in pillars}
 
     async def get_active_countries(self) -> List[Dict[str, Any]]:
-        """Active countries for GDELT scope and emerging-trends context."""
+        """Active countries for Free News country codes and emerging-trends context."""
         query = """
             SELECT CountryName, Region, CountryCode
             FROM Countries

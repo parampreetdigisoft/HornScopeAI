@@ -202,22 +202,23 @@ async def get_emerging_trends_and_issues(
         default=8,
         ge=1,
         le=250,
-        description="Number of GDELT articles to fetch (maxrecords); one card per article.",
+        description="Accepted for compatibility. Each call returns one card from one country and one topic.",
     ),
     queryVariant: Optional[int] = Query(
         default=None,
         ge=0,
         description=(
-            "GDELT market keyword variant index (0-7). Omit to auto-rotate every 5 minutes. "
-            "Each variant uses different Africa-scoped market risk keywords."
+            "Starting index for the country and topic rotation. "
+            "Omit to auto-rotate every 5 minutes."
         ),
     ),
 ):
     """
     Public homepage feed for emerging African market risks and trends.
 
-    Fetches GDELT articles (last 24h) filtered for Africa and market-related topics,
-    then returns structured country cards for the Hornscope UI.
+    One news search uses one country code from Countries and one topic.
+    The latest article UUID from that search is loaded and returned as one country card.
+    If that search fails, one different country and topic is tried, then the call stops.
     """
     try:
         response = await chat_service.get_emerging_trends_and_issues(

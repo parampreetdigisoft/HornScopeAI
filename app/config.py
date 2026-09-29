@@ -29,6 +29,13 @@ class Settings:
     
     Application_Auth_API_KEY: str= os.getenv("Application_Auth_API_KEY", "v1-abac4b8a0947535005d4595b2c05fce0b3ae9ab2872451d3d259451f36e03bg3")
 
+    # Free News API (emerging trends). Key stays in the environment, not in source.
+    FREENEWS_API_KEY: str = os.getenv("FREENEWS_API_KEY", "")
+    FREENEWS_BASE_URL: str = os.getenv(
+        "FREENEWS_BASE_URL",
+        "https://api.freenewsapi.io/v1",
+    )
+
     # ---------------------------
     # Database Configuration
     # ---------------------------

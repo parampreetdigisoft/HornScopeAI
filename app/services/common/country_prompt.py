@@ -2,9 +2,10 @@
 HS Prompt Templates — Static class holding ALL system prompts.
 Import this wherever a prompt is needed; never inline prompts in service files.
 """
-from urllib.parse import quote
+from urllib.parse import quote, urlencode
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Sequence, Tuple
+from app.config import settings
 from app.services.common.pillar_prompts import HSPillarPrompts
 
 
@@ -1858,48 +1859,49 @@ class HSPromptTemplates:
     """
 
     
-    # GDELT emerging-trends keyword variants. Keep each query to one short term —
-    # long OR-chains and sourcecountry filters are rejected as HTTP 429.
-    GDELT_EMERGING_KEYWORD_VARIANTS: Tuple[Tuple[str, ...], ...] = (
-        ("conflict",),
-        ("military",),
-        ("security",),
-        ("election",),
-        ("political crisis",),
-        ("protest",),
-        ("border",),
-        ("trade",),
-        ("sanctions",),
-        ("economic crisis",),
+    # One topic per Free News request. Values are the API's topic parameter.
+    FREENEWS_TOPICS: Tuple[str, ...] = (
+        "business",
+        "digital currencies",
+        "economy",
+        "education",
+        "energy",
+        "environment",
+        "finance",
+        "food",
+        "geology",
+        "health",
+        "internet security",
+        "jobs",
+        "medicine",
+        "nutrition",
+        "politics",
+        "social sciences",
+        "technology",
     )
 
     @staticmethod
-    def build_gdelt_country_scope(
+    def freenews_country_rows(
         countries: Sequence[Dict[str, Any]],
-    ) -> Tuple[Tuple[str, ...], Tuple[Tuple[str, ...], ...]]:
+    ) -> List[Dict[str, str]]:
         """
-        Build GDELT source-country scope from Countries table rows.
+        ISO alpha-2 country rows from the Countries table.
 
-        Returns (all_country_codes, region_groups) where region_groups rotates
-        by African sub-region (West Africa, East Africa, etc.).
+        Each Free News search uses exactly one of these codes.
         """
-        all_codes: List[str] = []
-        by_region: Dict[str, List[str]] = {}
+        rows: List[Dict[str, str]] = []
+        seen = set()
 
         for row in countries:
             code = str(row.get("CountryCode", "")).strip().upper()
-            if len(code) != 2:
+            if len(code) != 2 or not code.isalpha() or code in seen:
                 continue
-            all_codes.append(code)
-            region = str(row.get("Region", "") or "Africa").strip()
-            by_region.setdefault(region, []).append(code)
+            seen.add(code)
+            name = str(row.get("CountryName") or row.get("countryname") or "").strip()
+            region = str(row.get("Region") or "Africa").strip() or "Africa"
+            rows.append({"code": code, "name": name, "region": region})
 
-        region_groups = tuple(
-            tuple(codes)
-            for codes in by_region.values()
-            if codes
-        )
-        return tuple(all_codes), region_groups
+        return rows
 
     @staticmethod
     def selected_country_names(countries: Sequence[Dict[str, Any]]) -> Tuple[str, ...]:
@@ -1924,55 +1926,66 @@ class HSPromptTemplates:
         return ", ".join(names)
 
     @staticmethod
-    def gdelt_emerging_variant_count() -> int:
-        return len(HSPromptTemplates.GDELT_EMERGING_KEYWORD_VARIANTS)
+    def pick_emerging_news_start_index() -> int:
+        """Rotate the country/topic window every 5 minutes (UTC)."""
+        return int(datetime.now(timezone.utc).timestamp()) // 300
 
     @staticmethod
-    def pick_gdelt_emerging_variant_index() -> int:
-        """Rotate variant every 5 minutes (UTC) so repeated calls are not identical."""
-        bucket = int(datetime.now(timezone.utc).timestamp()) // 300
-        return bucket % HSPromptTemplates.gdelt_emerging_variant_count()
+    def _canonical_news_topic(topic: str) -> str:
+        topic_key = (topic or "").strip().casefold()
+        for allowed in HSPromptTemplates.FREENEWS_TOPICS:
+            if allowed.casefold() == topic_key:
+                return allowed
+        raise ValueError(f"Unsupported news topic: {topic}")
 
     @staticmethod
-    def _gdelt_emerging_query_string(keywords: Sequence[str]) -> str:
-        keyword = next((k.strip().split()[0] for k in keywords if k and k.strip()), "conflict")
-        return f"{keyword} AND africa sourcelang:eng"
+    def emerging_trends_news_window() -> Tuple[str, str]:
+        """Yesterday 00:00:00Z through today 23:59:59Z (UTC)."""
+        now = datetime.now(timezone.utc)
+        published_after = (now - timedelta(days=1)).strftime("%Y-%m-%dT00:00:00Z")
+        published_before = now.strftime("%Y-%m-%dT23:59:59Z")
+        return published_after, published_before
 
     @staticmethod
-    def emerging_trends_gdelt_url(
-        max_records: int,
-        all_country_codes: Sequence[str],
-        region_groups: Sequence[Sequence[str]],
-        variant_index: Optional[int] = None,
-    ) -> Tuple[str, int]:
+    def emerging_trends_news_list_url(country_code: str, topic: str) -> str:
         """
-        Build a short GDELT Doc API URL (last 24h, English, Africa-wide).
+        Free News search URL for exactly one country code and one topic.
 
-        Returns (url, variant_index_used). Query is one keyword + africa so GDELT
-        does not 429 long boolean / sourcecountry URLs.
+        language=en, order_by=recent, published window from emerging_trends_news_window.
         """
-        variants = HSPromptTemplates.GDELT_EMERGING_KEYWORD_VARIANTS
-        n_variants = len(variants)
-        if variant_index is None:
-            idx = HSPromptTemplates.pick_gdelt_emerging_variant_index()
-        else:
-            idx = int(variant_index) % n_variants
+        code = (country_code or "").strip().lower()
+        if len(code) != 2 or not code.isalpha():
+            raise ValueError(f"Country code must be ISO alpha-2: {country_code}")
 
-        n = max(1, min(250, int(max_records)))
-        query = HSPromptTemplates._gdelt_emerging_query_string(variants[idx])
-        encoded_query = quote(query, safe="")
-
-        url = (
-            "https://api.gdeltproject.org/api/v2/doc/doc"
-            f"?query={encoded_query}"
-            f"&mode=ArtList&maxrecords={n}&format=json&timespan=24h&sort=DateDesc"
+        published_after, published_before = HSPromptTemplates.emerging_trends_news_window()
+        query = urlencode(
+            {
+                "language": "en",
+                "country": code,
+                "topic": HSPromptTemplates._canonical_news_topic(topic),
+                "published_after": published_after,
+                "published_before": published_before,
+                "order_by": "recent",
+            },
+            quote_via=quote,
         )
-        return url, idx
+        base = settings.FREENEWS_BASE_URL.rstrip("/")
+        return f"{base}/news?{query}"
+
+    @staticmethod
+    def emerging_trends_news_detail_url(article_uuid: str) -> str:
+        """Details URL for the first UUID returned by the news search."""
+        article_id = (article_uuid or "").strip()
+        if not article_id:
+            raise ValueError("Article UUID is required")
+        query = urlencode({"uuid": article_id}, quote_via=quote)
+        base = settings.FREENEWS_BASE_URL.rstrip("/")
+        return f"{base}/details?{query}"
 
     @staticmethod
     def emerging_trend_risk_prompt() -> str:
         """
-        System prompt: map GDELT article list to public emerging-trends country cards.
+        System prompt: map news articles to public emerging-trends country cards.
         Articles are supplied in the user message; do not browse or invent URLs.
         """
         return f"""
@@ -1981,7 +1994,8 @@ class HSPromptTemplates:
         ==================================================
         DATA SOURCE (MANDATORY)
         ==================================================
-        You will receive a JSON list of news articles from the GDELT Doc API (last 24 hours).
+        You will receive a JSON list of news articles from the last two calendar days.
+        Each article was retrieved for exactly one country code and one topic.
         You MUST produce exactly one country card for EVERY article in that list (no skipping, no extras).
 
         CRITICAL:
@@ -1990,8 +2004,11 @@ class HSPromptTemplates:
         - For each card:
           - sourceUrl MUST equal the selected article's "url" field EXACTLY (character-for-character).
           - title MUST equal the selected article's "title" field EXACTLY.
-        - sourceUrl must be a direct article permalink (not Google News, not /search or listing pages).
-        - Use article "sourcecountry" as a hint for country/region when inferring metadata.
+          - country MUST equal the article's "countryName".
+          - countryCode MUST equal the article's "sourcecountry".
+          - region MUST equal the article's "region".
+        - sourceUrl must be a direct article permalink (not a search or listing page).
+        - Use the article "excerpt" only to write the summary. Do not copy the publisher name.
 
         ==================================================
         ANALYTICAL TASK
@@ -2000,7 +2017,7 @@ class HSPromptTemplates:
         2. Keep tone neutral, factual, concise, and Africa-wide understandable.
         3. Each card = ONE primary HornScope risk or trend aligned with the article headline
            (geopolitics, security, governance, economy, corridors, climate, cyber, humanitarian).
-        4. Every card MUST relate to an African country (infer from headline and sourcecountry).
+        4. Every card MUST use the country, country code, and region supplied on the article.
         5. Prefer category "Conflict", "Security", "Governance", "Climate", or "Economy"
            unless the story is clearly another domain.
         6. Preserve the article order from the input list when possible.
@@ -2030,7 +2047,7 @@ class HSPromptTemplates:
                     "countryCode": "NG",
                     "region": "West Africa",
                     "type": "risk",
-                    "title": "Exact headline copied from GDELT article title field",
+                    "title": "Exact headline copied from the article title field",
                     "summary": "Concise public summary of the strategic story in under 200 characters.",
                     "category": "Market",
                     "status": "Active",
@@ -2038,7 +2055,7 @@ class HSPromptTemplates:
                     "confidence": 75,
                     "icon": "market",
                     "color": "orange",
-                    "sourceUrl": "https://example.com/exact-url-from-gdelt-article-url-field"
+                    "sourceUrl": "https://example.com/exact-url-from-article-url-field"
                 }}
             ]
         }}
@@ -2084,19 +2101,19 @@ class HSPromptTemplates:
 
     @staticmethod
     def emerging_trends_and_issues_user_prompt() -> str:
-        """User message template for GDELT-backed emerging trends feed."""
+        """User message template for the Free News emerging trends feed."""
         return """
         Current UTC datetime (now):
         {current_date}
 
-        GDELT articles (use ONLY these — do not browse the web; one card per article):
+        News articles (use ONLY these — do not browse the web; one card per article):
         {articles_json}
 
-        Scope: HornScope — only African countries; strategic risks and trends.
+        Scope: HornScope — only the countries supplied on each article; strategic risks and trends.
 
         For each article:
-        - Infer African country, countryCode, region, category, status, urgency, color, icon, and summary
-          from its title and sourcecountry field.
+        - Set country, countryCode, and region from countryName, sourcecountry, and region.
+        - Infer category, status, urgency, color, icon, and summary from its title, topic, and excerpt.
         - Default to category "Conflict" or "Security" for violence stories, "Governance" for political
           stories, "Climate" for drought/flood, "Economy" for fiscal/trade, "Technology" for cyber.
         - Choose status/urgency/color consistently with the headline and strategic impact.

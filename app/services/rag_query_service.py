@@ -25,7 +25,12 @@ from typing import List, Dict, Any, Optional
 from app.services.common.embedding import create_embedding_function
 from app.services.common.llm_base_service import LLMBaseService
 from app.services.common.country_prompt import HSPromptTemplates
-from app.services.common.gdelt_client import fetch_doc_articles
+from app.services.common.freenews_client import (
+    FreeNewsRequestError,
+    fetch_first_article,
+    is_invalid_country,
+    note_invalid_country,
+)
 from app.services.common.pillar_prompts import HSPillarPrompts
 from app.services.core.repository import DatabaseRepository
 from app.services.common import json_response_parser as jrp
@@ -448,57 +453,123 @@ class RAGQueryService:
             }
 
 
-    async def _fetch_gdelt_emerging_articles(
+    @staticmethod
+    def _next_news_pair(
+        rows: List[Dict[str, str]],
+        topics: tuple,
+        start: int,
+        blocked_countries: set,
+        blocked_topics: set,
+    ) -> Optional[tuple]:
+        """Next unused country and topic, skipping codes the news API already rejected."""
+        span = max(len(rows), len(topics))
+        for step in range(span):
+            idx = start + step
+            row = rows[idx % len(rows)]
+            topic = topics[idx % len(topics)]
+            code = row["code"]
+            if code in blocked_countries or is_invalid_country(code):
+                continue
+            if topic in blocked_topics:
+                continue
+            return row, topic
+        return None
+
+    async def _fetch_one_news_article(
+        self,
+        client: httpx.AsyncClient,
+        row: Dict[str, str],
+        topic: str,
+    ) -> Optional[Dict[str, Any]]:
+        """One list call, then one details call for the latest UUID. No URL retry."""
+        try:
+            return await fetch_first_article(
+                client,
+                row["code"],
+                topic,
+                country_name=row["name"],
+                region=row["region"],
+            )
+        except FreeNewsRequestError as exc:
+            if exc.invalid_country:
+                note_invalid_country(exc.invalid_country)
+            logger.warning(
+                "Free News fetch failed for %s / %s: %s",
+                row["code"],
+                topic,
+                exc,
+            )
+            # Rate limit or server error: do not send another request in this call.
+            if exc.status_code == 429 or (exc.status_code or 0) >= 500:
+                raise
+            return None
+        except Exception as exc:
+            logger.warning(
+                "Free News fetch failed for %s / %s: %s",
+                row["code"],
+                topic,
+                exc,
+            )
+            return None
+
+    async def _fetch_emerging_articles(
         self,
         max_records: int,
         query_variant: Optional[int] = None,
     ) -> List[Dict[str, Any]]:
         """
-        Fetch GDELT articles (one variant per request, 5s throttle between calls).
-        Tries at most two variants if the first returns no articles.
+        One Free News search per FastAPI call.
+
+        Uses one Countries.CountryCode and one topic, then the latest UUID
+        from that list. If that pair returns nothing, try one different
+        country and one different topic, then stop.
         """
+        del max_records  # countryCount stays on the public route; this call returns one article
         countries = await self._db.get_active_countries()
-        all_country_codes, region_groups = HSPromptTemplates.build_gdelt_country_scope(
-            countries
+        rows = HSPromptTemplates.freenews_country_rows(countries)
+        if not rows:
+            raise ValueError("No country codes configured in Countries")
+
+        topics = HSPromptTemplates.FREENEWS_TOPICS
+        start = (
+            int(query_variant)
+            if query_variant is not None
+            else HSPromptTemplates.pick_emerging_news_start_index()
         )
 
-        variant_count = HSPromptTemplates.gdelt_emerging_variant_count()
-        start_idx = (
-            query_variant
-            if query_variant is not None
-            else HSPromptTemplates.pick_gdelt_emerging_variant_index()
-        ) % variant_count
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            first = self._next_news_pair(rows, topics, start, set(), set())
+            if first is None:
+                raise ValueError("No supported country codes available")
 
-        last_error: Optional[Exception] = None
-        max_variant_tries = 2 if query_variant is None else 1
+            row, topic = first
+            article = await self._fetch_one_news_article(client, row, topic)
+            if article:
+                return [article]
 
-        for attempt in range(max_variant_tries):
-            idx = (start_idx + attempt) % variant_count
-            gdelt_url, _ = HSPromptTemplates.emerging_trends_gdelt_url(
-                max_records,
-                all_country_codes,
-                region_groups,
-                variant_index=idx,
+            logger.info(
+                "Free News returned nothing for %s / %s; trying one other country and topic",
+                row["code"],
+                topic,
             )
-            cache_key = f"emerging:{max_records}:{idx}"
+            fallback = self._next_news_pair(
+                rows,
+                topics,
+                start + 1,
+                {row["code"]},
+                {topic},
+            )
+            if fallback is None:
+                raise ValueError("Free News API returned no articles")
 
-            try:
-                articles_raw = await fetch_doc_articles(gdelt_url, cache_key=cache_key)
-                if articles_raw:
-                    return articles_raw
-                logger.warning(
-                    "GDELT variant %s returned no articles",
-                    idx,
-                )
-            except Exception as exc:
-                last_error = exc
-                logger.warning("GDELT fetch failed for variant %s: %s", idx, exc)
-                if attempt + 1 >= max_variant_tries:
-                    raise
+            fallback_row, fallback_topic = fallback
+            article = await self._fetch_one_news_article(
+                client, fallback_row, fallback_topic
+            )
+            if article:
+                return [article]
 
-        if last_error:
-            raise last_error
-        raise ValueError("GDELT returned no articles")
+        raise ValueError("Free News API returned no articles")
 
     async def emerging_trends_and_issues(
         self,
@@ -511,13 +582,13 @@ class RAGQueryService:
             now_utc = datetime.now(timezone.utc)
 
             # ---------------------------------------------------------
-            # Fetch articles from GDELT (last 24h, English; Hornscope rotated query)
+            # One country + one topic per Free News search; first UUID only
             # ---------------------------------------------------------
-            articles_raw = await self._fetch_gdelt_emerging_articles(
+            articles_raw = await self._fetch_emerging_articles(
                 max_records, query_variant=query_variant
             )
-            # Only trust these fields from GDELT; LLM fills rest (country/region/code/etc).
             articles: List[Dict[str, Any]] = []
+            article_meta: Dict[str, Dict[str, str]] = {}
             for a in articles_raw[:max_records]:
                 if not isinstance(a, dict):
                     continue
@@ -526,20 +597,22 @@ class RAGQueryService:
                 if not url.startswith(("http://", "https://")) or not title:
                     continue
 
-                articles.append(
-                    {
-                        "url": url,
-                        "title": title,
-                        "seendate": str(a.get("seendate", "")).strip(),
-                        "domain": str(a.get("domain", "")).strip(),
-                        "language": str(a.get("language", "")).strip(),
-                        "sourcecountry": str(a.get("sourcecountry", "")).strip(),
-                        "socialimage": str(a.get("socialimage", "")).strip(),
-                    }
-                )
+                article = {
+                    "url": url,
+                    "title": title,
+                    "seendate": str(a.get("seendate", "")).strip(),
+                    "language": str(a.get("language", "")).strip(),
+                    "sourcecountry": str(a.get("sourcecountry", "")).strip(),
+                    "countryName": str(a.get("countryName", "")).strip(),
+                    "region": str(a.get("region", "")).strip(),
+                    "topic": str(a.get("topic", "")).strip(),
+                    "excerpt": str(a.get("excerpt", "")).strip(),
+                }
+                articles.append(article)
+                article_meta[url] = article
 
             if not articles:
-                raise ValueError("Insufficient usable GDELT articles")
+                raise ValueError("Insufficient usable news articles")
 
             system_prompt = HSPromptTemplates.emerging_trend_risk_prompt()
             user_template = HSPromptTemplates.emerging_trends_and_issues_user_prompt()
@@ -556,8 +629,7 @@ class RAGQueryService:
 
             analysis = json.loads(jrp.clean_json_response(raw))
 
-            # Guardrail: ensure cards only reference provided URLs and titles.
-            allowed_url_to_title = {a["url"]: a["title"] for a in articles if a.get("url")}
+            # Guardrail: cards keep the fetched URL, title, and Countries-table identity.
             cards = analysis.get("countries") or []
             if isinstance(cards, list):
                 cleaned_cards: List[Dict[str, Any]] = []
@@ -565,11 +637,17 @@ class RAGQueryService:
                     if not isinstance(c, dict):
                         continue
                     u = str(c.get("sourceUrl", "")).strip()
-                    t = str(c.get("title", "")).strip()
-                    if not u or u not in allowed_url_to_title:
+                    meta = article_meta.get(u)
+                    if not meta:
                         continue
-                    if allowed_url_to_title[u] != t:
-                        c["title"] = allowed_url_to_title[u]
+                    c["title"] = meta["title"]
+                    c["sourceUrl"] = meta["url"]
+                    if meta.get("countryName"):
+                        c["country"] = meta["countryName"]
+                    if meta.get("sourcecountry"):
+                        c["countryCode"] = meta["sourcecountry"]
+                    if meta.get("region"):
+                        c["region"] = meta["region"]
                     cleaned_cards.append(c)
                 analysis["countries"] = cleaned_cards
 

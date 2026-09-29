@@ -352,6 +352,8 @@ class ChatService:
             title = ChatService._strip_source_mentions(
                 str(item.get("title", "")).strip()
             )
+            if len(title) > 200:
+                title = title[:197].rstrip() + "..."
             summary = ChatService._strip_source_mentions(summary)
 
             normalized_countries.append(

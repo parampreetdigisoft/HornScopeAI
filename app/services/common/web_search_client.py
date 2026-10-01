@@ -215,6 +215,7 @@ async def invoke_with_web_search(
     user_input: str,
     *,
     model: Optional[str] = None,
+    rewrite_spans: bool = True,
 ) -> Tuple[str, List[Dict[str, str]]]:
     """
     Call OpenAI Responses API with the built-in web_search tool.
@@ -225,7 +226,9 @@ async def invoke_with_web_search(
     if not web_search_available():
         raise RuntimeError("OpenAI Web Search is not configured")
 
-    cache_key = hashlib.sha256(user_input.encode("utf-8", errors="ignore")).hexdigest()
+    cache_key = hashlib.sha256(
+        f"{instructions}:{user_input}:{rewrite_spans}".encode("utf-8", errors="ignore")
+    ).hexdigest()
     cached = _cache_get(cache_key)
     if cached:
         return cached
@@ -246,6 +249,7 @@ async def invoke_with_web_search(
             "instructions": instructions,
             "input": user_input,
             "temperature": settings.OPENAI_TEMPERATURE,
+            "max_output_tokens": 16000,
         }
         attempts = [
             {**base_kwargs, "include": ["web_search_call.action.sources"]},
@@ -258,7 +262,8 @@ async def invoke_with_web_search(
                 if not text:
                     raise RuntimeError("Web Search returned empty text")
                 sources = _extract_sources(response, text)
-                text = _rewrite_annotation_spans(text, response)
+                if rewrite_spans:
+                    text = _rewrite_annotation_spans(text, response)
                 _cache_set(cache_key, text, sources)
                 logger.info(
                     "Web Search completed via %s (%s verified URLs)",

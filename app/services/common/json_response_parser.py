@@ -114,10 +114,14 @@ def _fix_json_escaping(json_str: str) -> str:
       - Escaped single quotes (not needed in JSON)
       - Unescaped newlines / tabs inside strings
       - Invalid backslash sequences
+      - Unterminated strings at EOF
+      - Unclosed object/array brackets at EOF
+      - Trailing commas before closing brackets
     """
     result: list[str] = []
     i = 0
     in_string = False
+    stack: list[str] = []
 
     while i < len(json_str):
         char = json_str[i]
@@ -154,10 +158,37 @@ def _fix_json_escaping(json_str: str) -> str:
                 result.append(char)
                 i += 1
         else:
-            result.append(char)
+            if char in ("{", "["):
+                stack.append("}" if char == "{" else "]")
+                result.append(char)
+            elif char in ("}", "]"):
+                if stack and stack[-1] == char:
+                    stack.pop()
+                result.append(char)
+            else:
+                result.append(char)
             i += 1
 
-    return "".join(result)
+    # If truncated inside a string literal, close the string
+    if in_string:
+        result.append('"')
+
+    res_str = "".join(result).rstrip()
+
+    # Strip any dangling trailing commas or colons before closing structures
+    while res_str and res_str[-1] in (",", ":"):
+        res_str = res_str[:-1].rstrip()
+
+    # Close any unclosed arrays or objects in reverse order
+    while stack:
+        closer = stack.pop()
+        while res_str and res_str[-1] == ",":
+            res_str = res_str[:-1].rstrip()
+        res_str += closer
+
+    # Clean trailing commas inside objects or arrays: { "a": 1, } -> { "a": 1 }
+    res_str = re.sub(r",\s*([\]}])", r"\1", res_str)
+    return res_str
 
 
 def _log_context(json_str: str, pos: int, window: int = 100) -> None:

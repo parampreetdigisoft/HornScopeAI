@@ -18,6 +18,10 @@ from app.services.common.pillar_prompts import HSPillarPrompts
 from app.services.common.country_prompt import HSPromptTemplates
 from app.services.common import json_response_parser as jrp
 from app.services.core.repository import db_repository
+from app.services.common.web_search_client import (
+    invoke_with_web_search,
+    web_search_available,
+)
 logger = logging.getLogger(__name__)
 
 # --------------------------------------------------------------------------- #
@@ -127,17 +131,31 @@ class HSResearchService:
             system_prompt = HSPromptTemplates.pillar_system_prompt(pillar_context, year)
 
             label = f"pillar|{country_name}|pillar{pillarId}"
-            raw = await self._llm_svc.invoke_chain(
-                system_prompt=system_prompt,
-                user_template=_PILLAR_USER_TMPL,
-                variables={
-                    "country_name": country_name,
-                    "continent": continent,
-                    "pillar_name": pillar_name,
-                    "year": year
-                },
-                label=label,
-            )
+
+            if web_search_available():
+                user_prompt = _PILLAR_USER_TMPL.format(
+                    country_name=country_name,
+                    continent=continent,
+                    pillar_name=pillar_name,
+                    year=year,
+                )
+                raw, _ = await invoke_with_web_search(
+                    instructions=system_prompt,
+                    user_input=user_prompt,
+                    rewrite_spans=False,
+                )
+            else:
+                raw = await self._llm_svc.invoke_chain(
+                    system_prompt=system_prompt,
+                    user_template=_PILLAR_USER_TMPL,
+                    variables={
+                        "country_name": country_name,
+                        "continent": continent,
+                        "pillar_name": pillar_name,
+                        "year": year,
+                    },
+                    label=label,
+                )
 
             analysis = json.loads(jrp.clean_json_response(raw))
             jrp.validate_pillar_response(analysis)

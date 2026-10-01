@@ -10,6 +10,7 @@ Do NOT call this directly in business code — just use:
     logger.error("something broke")
 """
 
+import asyncio
 import logging
 import traceback
 from datetime import datetime
@@ -32,7 +33,22 @@ class DatabaseLogHandler(logging.Handler):
         super().__init__()
         self.engine = engine or db_engine
 
-    async def emit(self, record: logging.LogRecord) -> None:
+    def emit(self, record: logging.LogRecord) -> None:
+        try:
+            loop = None
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                pass
+
+            if loop and loop.is_running():
+                loop.create_task(self._async_emit(record))
+            else:
+                asyncio.run(self._async_emit(record))
+        except Exception as e:
+            print(f"[DatabaseLogHandler] Failed to dispatch log write: {e}")
+
+    async def _async_emit(self, record: logging.LogRecord) -> None:
         try:
             exception_text: Optional[str] = None
             if record.exc_info:

@@ -127,14 +127,11 @@ class HSPillarPrompts:
         Rules:
         - ≥2 independent sources per claim
         - No single-source conclusions
-        - Structural/operational evidence > perception
 
-        9. FOUR-LAYER EVIDENCE (ALL REQUIRED)
+        9. EVIDENCE LAYERS (ALL REQUIRED)
         a) Structural (laws, institutions, treaties, mandates, constitutional order)
         b) Operational (budgets, enforcement, security operations, administration, customs)
         c) Outcome (conflict incidents, displacement, growth, corridor throughput, measured results)
-        d) Perception (public trust, grievance, elite and social chatter)
-        → Perception cannot override structural/operational evidence
 
         10. DISTRIBUTIONAL ANALYSIS (MANDATORY)
         Test for core vs hinterland gaps, corridor vs interior access, connected vs excluded

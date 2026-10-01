@@ -278,7 +278,6 @@ def map_question_response(
         "StructuralEvidence": four.get("structural"),
         "OperationalEvidence": four.get("operational"),
         "OutcomeEvidence": four.get("outcome"),
-        "PerceptionEvidence": four.get("perception"),
         # Narrative fields
         "EvidenceSummary": analysis.get("evidence_summary"),
         "TemporalReliability": analysis.get("temporal_reliability"),
@@ -323,7 +322,6 @@ def map_pillar_response(
         "StructuralEvidence": analysis.get("four_layer_evidence", {}).get("structural"),
         "OperationalEvidence": analysis.get("four_layer_evidence", {}).get("operational"),
         "OutcomeEvidence": analysis.get("four_layer_evidence", {}).get("outcome"),
-        "PerceptionEvidence": analysis.get("four_layer_evidence", {}).get("perception"),
         # Temporal & distortion
         "TemporalReliability": analysis.get("temporal_reliability"),
         "RelationalIntegrity": analysis.get("relational_integrity"),
@@ -355,7 +353,6 @@ def map_country_response(
         "StructuralEvidence": four.get("structural"),
         "OperationalEvidence": four.get("operational"),
         "OutcomeEvidence": four.get("outcome"),
-        "PerceptionEvidence": four.get("perception"),
         "ReliabilityAssessment": analysis.get("reliability_assessment"),
         "TemporalReliability": analysis.get("temporal_reliability"),
         "GeopoliticalShock": stress.get("geopolitical_shock") or stress.get("political_shock"),

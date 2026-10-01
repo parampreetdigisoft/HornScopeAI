@@ -232,7 +232,7 @@ class HSResearchService:
                     pillar_list_str
                 )
             else:
-                system_prompt = HSPromptTemplates.country_summery_system_prompt(
+                system_prompt = HSPromptTemplates.country_summary_system_prompt(
                     publicContext=ai_country_context,
                     documentContext=documentContext
                 )

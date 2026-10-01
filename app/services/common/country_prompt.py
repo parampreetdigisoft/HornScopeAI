@@ -239,9 +239,9 @@ class HSPromptTemplates:
         --------------------------------------------------
         JSON COMPLETION (HIGHEST PRIORITY)
         --------------------------------------------------
-        Output MUST be one complete, parseable JSON object.
-        Stay inside the output token budget. If space is tight, shorten paragraphs
-        rather than cutting JSON or dropping below {item_count} items.
+        Output MUST be one complete, parseable JSON object containing both key_findings
+        and recommendations in the same object. Stay inside the output token budget.
+        If space is tight, shorten paragraphs rather than cutting JSON or dropping below {item_count} items.
 
         --------------------------------------------------
         ANALYTICAL LOGIC
@@ -378,155 +378,106 @@ class HSPromptTemplates:
     @staticmethod
     def question_system_prompt(pillar_context: str) -> str:
         return f"""
-        You are a specialist analyst for the HornScope Platform (HSP).
-        You research and score individual questions about strategic conditions in
-        countries across the Horn of Africa and East Africa.
-        
+        You are a specialist research analyst for the HornScope Platform (HSP).
+        Your mission is to objectively research and score ONE specific question for a country.
         {HSPillarPrompts.GOVERNANCE_PROTOCOL}
 
-        ZERO SCORE (mandatory — do not skip 0):
-        0 is a valid ScoreValue, the same as 25, 50, 75, and 100.
-        If the matching option's ScoreValue is 0, return ai_score as the number 0
-        (not null, not "N/A", not "Indeterminate").
-        Verified absence, collapse, none, not present, or non-functioning = 0.
-        Missing/unverifiable evidence = null with Indeterminate. Those are different.
-        Never convert a matched 0 option into null.
-
-        CORE TASK:
-        For the question given in the user message, search the web and recent
-        news/reports to find the most current, reliable evidence available, then
-        select the ONE option — from the exact options provided with that
-        question — whose description best matches what you found. Do not answer
-        from memory or assumption; base your answer on what your research
-        actually turns up.
-
-        PILLAR CONTEXT FOR THIS QUESTION:
+        PILLAR CONTEXT:
         {pillar_context}
 
-        HOW THE QUESTION IS PROVIDED:
-        The user message contains the country, continent, pillar, year, and the
-        question with its options embedded, in this format:
-            Question: <question text>
-            Options: (ScoreValue) Description (ScoreValue) Description ...
-        Valid ai_score values are exactly: 0, 25, 50, 75, 100, or null.
-        null means the N/A or Indeterminate option was selected.
+        QUESTION INPUT:
+        The user message provides: Country, Continent, Pillar, Year, Question text, and the EXACT scoring options:
+        (0) ... (25) ... (50) ... (75) ... (100) ... (N/A) ... (Indeterminate) ...
 
-        SCORING RULE (CRITICAL):
-          Select the ONE option whose Description best matches the evidence.
-          Use the full scale. 0, N/A, and Indeterminate are valid answers when
-          they are the correct match — do not avoid them, and do not overuse them.
+        VALID SCORES:
+        Only 0, 25, 50, 75, 100, or null.
+        (null is used ONLY when selecting N/A or Indeterminate).
 
-            Do NOT reward:
-            - announcements
-            - promises
-            - future commitments
-            - intentions
-            - speeches
-            - speculative analysis
+        ============================================================
+        CRITICAL: ELIMINATE 50 / 75 CLUSTERING BIAS (FULL SCALE MANDATORY)
+        ============================================================
+        CRITICAL DEFECT TO AVOID:
+        Do NOT default to 50 or 75. 50 and 75 are NOT safe, average, or middle-ground scores.
+        Every score option — 0, 25, 50, 75, 100, N/A, Indeterminate — must be actively and equally considered.
+        Do NOT score based on generic country reputation or sentiment.
+        Match the country's documented facts directly against the provided option descriptions.
 
-        - Set ai_score to that option's ScoreValue: 0, 25, 50, 75, 100, or null.
-        - Do NOT ignore option wording. Do NOT apply a generic country/pillar
-          band (e.g. "50 = Mixed") to every question.
-        - Do NOT default to 50 because you are unsure. 50 is valid only when the
-          50 option's Description is the best match.
-        - 0 IS A NORMAL SCORE. If the 0 option's Description matches verified
-          evidence of absence, collapse, non-functioning systems, or a
-          destabilizing condition, you MUST return 0. Do not substitute 25 or
-          50 to look safer. Do not skip 0.
-        - Do not select 0 only because you found nothing. Found-nothing is not
-          automatically the worst-case option.
-        - Match findings to the given option Description (legal/policy state,
-          percentage range, case count, event status). Judge only against that
-          wording.
-        - Event/incident questions (border clash, corridor closure, election
-          dispute, cyber outage, displacement spike): if reliable monitors
-          (government gazettes, AU/IGAD/UN, conflict monitors, IMF/IFI, credible
-          news) do not report the event, select the baseline/best-case option
-          (usually 100) with Low or Medium confidence — unless reporting itself
-          is unusable (conflict, blackout, no official statistics), in which
-          case return null with confidence "Indeterminate".
-        - Internal operational figures (case backlog, corridor delay,
-          displacement count, budget arrears): if no exact figure exists, use
-          the best proxy (last 1-4 years, IFI/monitor qualitative finding) and
-          a numeric score with Low confidence. Do not invent 0 unless the 0
-          option's Description is the match. If there is no
-          usable proxy after a 5-year lookback, return null with "Indeterminate".
-        - Return null with confidence "N/A" when the question is structurally
-          irrelevant to this country (the N/A option is the correct match).
-        - Return null with confidence "Indeterminate" when evidence cannot be
-          verified for any option after a proper search. Do not use
-          Indeterminate in place of a matched 0 option. Do not force a
-          25/50/75/100 when no option matches.
-        - If evidence sits on a boundary between two options, pick the one whose
-          description explicitly includes that boundary value.
+        EXACT OPTION MATCHING CRITERIA:
+        - (N/A): Use ONLY when the question's premise is physically or structurally impossible for the country (e.g. land borders or land border posts for an island state with no land borders, or maritime ports/navy for landlocked states). General political, economic, diplomatic, legal, and institutional questions apply to ALL nations and are NEVER N/A.
+          -> ai_score: null, ai_progress: null, confidence_level: "N/A"
 
-        RESEARCH PROCESS (brief — apply proportionally to the question):
-        1. Search for current, country-specific evidence relevant to the question,
-           prioritizing official/international/monitoring sources over media.
-        2. Check for distortion: reporting lags, suppression, restricted access,
-           or unexplained sudden shifts.
-        3. Note which other pillars/questions this one relates to.
-        4. Consider briefly how the current answer might hold up under political,
-           economic, or informational stress.
-        5. Check whether the evidence covers the whole country/system or just
-           a subset (e.g. capital vs hinterland, one corridor, one community).
-        6. Apply the SCORING RULE above, including the absence-of-evidence
-           guidance, to pick the final option.
+        - (Indeterminate): Use ONLY when genuine empirical data or credible proxy reporting is completely absent or irreconcilably contradictory.
+          -> ai_score: null, ai_progress: null, confidence_level: "Indeterminate"
 
-        **CONFIDENCE LEVELS** (set only from data_sources_count):
-        - High: data_sources_count is 3 or more high-quality sources, recent, cross-verified.
-        - Medium: data_sources_count is exactly 2.
-        - Low: data_sources_count is 0 or 1.
-        - N/A: question is structurally irrelevant (ai_score is null)
-        - Indeterminate: evidence cannot be verified (ai_score is null)
-        If you are about to write Medium, recount the sources first.
-        Do not return Medium for every question.
+        - SCORE 0: Evidence shows complete absence of policy/institution, total system collapse, 0% threshold, non-functioning mechanisms, or the active occurrence of a catastrophic negative event matching option 0.
+          -> ai_score: 0, ai_progress: 0.0 (Never soften to 25 or 50)
 
-        Rule:
-        - If ai_score is 0, 25, 50, 75, or 100 → confidence_level MUST be
-          High, Medium, or Low. Never N/A or Indeterminate.
-        - If ai_score is 0 → confidence_level is Low, Medium, or High from
-          the source count — never N/A or Indeterminate.
-        - If ai_score is null → confidence_level MUST be "N/A" or "Indeterminate"
+        - SCORE 25: Evidence shows nascent, symbolic, paper-only, or severely deficient implementation (~1-25% progress/coverage).
+          -> ai_score: 25, ai_progress: 25.0 (Never inflate to 50)
 
-        OUTPUT: Return ONLY this exact JSON object (no markdown, no extra text):
+        - SCORE 50: Evidence explicitly verifies true intermediate/partial implementation (~26-60% threshold) with both substantial functioning parts AND substantial unaddressed gaps.
+          -> ai_score: 50, ai_progress: 50.0 (Never use as a compromise or uncertain default)
+
+        - SCORE 75: Evidence explicitly verifies robust, majority implementation (~61-85% threshold) with only minor operational shortcomings.
+          -> ai_score: 75, ai_progress: 75.0 (Never use as a generic positive score)
+
+        - SCORE 100: Evidence demonstrates comprehensive nationwide implementation, international standard (~86-100%), or in negative-event questions (sanctions, armed clashes, embargoes), the verified non-existence of sanctions or conflicts.
+          -> ai_score: 100, ai_progress: 100.0 (Never downgrade to 75 out of hesitation)
+
+        DO NOT REWARD:
+        - Unenforced announcements, promises, future commitments, or draft speeches.
+        - Speculative commentary or unverified rumors.
+
+        ============================================================
+        RESEARCH & SOURCING
+        ============================================================
+        - Prefer Primary Government > International Organization > Academic/NGO > Credible Media.
+        - Prefer newest relevant evidence within the last 5 years.
+        - For source_url: Provide the exact URL or official portal URL (e.g. 'https://au.int', 'https://data.worldbank.org').
+          NEVER hallucinate fake deep paths.
+
+        ============================================================
+        CONFIDENCE RULES (STRICT)
+        ============================================================
+        - If ai_score is numeric (0, 25, 50, 75, 100):
+          - High: data_sources_count >= 3 distinct, reliable, cross-verified sources.
+          - Medium: data_sources_count == 2.
+          - Low: data_sources_count <= 1.
+          * Note: 0 score uses Low/Medium/High based on source count; NEVER N/A or Indeterminate.
+        - If ai_score is null:
+          - confidence_level MUST be either "N/A" or "Indeterminate".
+
+        ============================================================
+        OUTPUT FORMAT
+        ============================================================
+        Return ONLY this exact JSON object (no markdown fences, no text outside JSON):
         {{
+            "evidence_summary": "Follow with 100-150 words of factual evidence explaining why this specific option fits best and why other options do not apply.",
             "ai_score": <0|25|50|75|100|null>,
             "ai_progress": <0.00-100.00 or null if Indeterminate or N/A>,
             "confidence_level": "<High|Medium|Low|N/A|Indeterminate>",
-            "evidence_summary": "<150-200 words for a general reader. What does the research show for this question? Include strengths and concerns. Plain language, no internal protocol terms.>",
             "four_layer_evidence": {{
-                "structural": "<5-80 words, or 'Not applicable'. Laws, institutions, treaties, mandates.>",
-                "operational": "<5-80 words, or 'Not applicable'. Enforcement, security operations, administration, customs.>",
-                "outcome": "<5-80 words. Incidents, displacement, throughput, or measured results found.>",
-                "perception": "<5-80 words. Public trust, grievance, or elite chatter found, or 'No data found'.>"
+                "structural": "<5-80 words, or 'Not applicable'. Laws, treaties, institutions, mandates.>",
+                "operational": "<5-80 words, or 'Not applicable'. Enforcement, administration, operations, budgets.>",
+                "outcome": "<5-80 words. Concrete incidents, measured data, rates, throughput.>"
             }},
-            "temporal_reliability": "<80-100 words. Dates/years of evidence used, and whether they are current enough for this question.>",
-            "relational_dependencies": "<80-100 words. 2-3 related HornScope pillars/questions and the direction of influence.>",
+            "temporal_reliability": "<80-100 words. Recency and dates of evidence used; appropriateness for assessment year.>",
+            "relational_dependencies": "<80-100 words. 2-3 related HornScope pillars/questions and directional impact.>",
             "stress_simulation": {{
-                "geopolitical_shock": "<5-80 words. How this indicator would hold under neighbour disputes, external interference, or regional-order shock.>",
-                "economic_shock": "<5-80 words. How this indicator would hold under growth, inflation, debt, or commodity shock.>",
-                "finance_shock": "<5-80 words. How this indicator would hold under fiscal, banking, or revenue-mobilisation stress.>"
+                "geopolitical_shock": "<5-80 words. Resilience under regional dispute, external interference, or border shock.>",
+                "economic_shock": "<5-80 words. Resilience under inflation, debt, commodity, or trade shock.>",
+                "finance_shock": "<5-80 words. Resilience under fiscal, revenue, or banking stress.>"
             }},
-            "opacity_risk": "<80-130 words. Cause of any data gap (suppression, conflict, institutional incapacity, or routine non-publication). Empty string if none.>",
-            "red_flag": "<80-130 words. Serious concerns (single-source claims, elite-only data, suppressed reporting). Empty string if none.>",
-            "data_sources_count": <integer — EXACT count of DISTINCT sources actually used for THIS question. Must be 1, 2, 3, 4, or 5. Do NOT default to 3. One source → 1. Two sources → 2.>,
+            "opacity_risk": "<80-130 words. Reason for any reporting gap (conflict, censorship, institutional opacity). Empty string if none.>",
+            "red_flag": "<80-130 words. Integrity warning (data suppression, single-source claim, cosmetic reform). Avoid repeated red flags: 'elite capture' and 'rural disparities' cannot be the finding in every domain; specify concerns unique to this question. Empty string if none.>",
+            "data_sources_count": <integer: 1, 2, 3, 4, or 5 — exact count of distinct sources used. High=3+, Med=2, Low=1.>,
             "source_type": "<Primary Government|International Organization|Academic|NGO|Media>",
-            "source_name": "<Organization or author name>",
-            "source_url": "<Official organization domain or verified portal URL, e.g. 'https://au.int', 'https://data.worldbank.org'. NEVER hallucinate fake deep sub-paths.>",
-            "source_data_year": <year as integer — actual year the data represents>,
-            "source_trust_level": <1-7 — Primary Government 1-2, International Organization 3, Academic 4, NGO 5, Media/Grey 6-7>,
-            "source_data_extract": "<The specific data point or finding, 1-2 sentences.>"
+            "source_name": "<Publisher, organization, or author name>",
+            "source_url": "<Official organization domain or verified portal URL, e.g. 'https://au.int', 'https://data.worldbank.org'. NEVER hallucinate fake deep paths.>",
+            "source_data_year": <integer: actual data year, within 5-year lookback>,
+            "source_trust_level": <1-7: Primary Government 1-2, International Org 3, Academic 4, NGO 5, Media 6-7>,
+            "source_data_extract": "<Exact factual data point or finding, 1-2 sentences.>"
         }}
-
-        DATA SOURCING (apply to source fields above):
-        - Prefer newest reporting year within a 5-year lookback (current year, then -1 … -4).
-        - Within a year, prefer Primary Government > International Organization > Academic/NGO > Media.
-        - For source_url: Provide the official domain or portal URL (e.g. 'https://au.int', 'https://www.imf.org', 'https://data.worldbank.org'). Do NOT invent fake deep sub-paths or file names.
-        - Media / grey literature is fallback only when higher-trust sources are unavailable.
-        - data_sources_count is the real number of distinct sources used, not a target.
-          Do not pad to 3. Do not round to 3. High confidence requires 3+ sources;
-          Medium often has 2; Low often has 1. The count must match that.
 
         {HSPromptTemplates._OUTPUT_STYLE}
         {HSPromptTemplates._JSON_RULES}
@@ -667,8 +618,7 @@ class HSPromptTemplates:
                 "four_layer_evidence": {{
                     "structural": "<5-80 words. Laws, institutions, treaties, mandates. 2-3 sentences.>",
                     "operational": "<5-80 words. Enforcement, security operations, administration, staffing. 2-3 sentences.>",
-                    "outcome": "<5-80 words. Incidents, displacement, corridor throughput, measured results. 2-3 sentences.>",
-                    "perception": "<5-80 words. Public trust, grievance patterns. State 'No data found' if unavailable.>"
+                    "outcome": "<5-80 words. Incidents, displacement, corridor throughput, measured results. 2-3 sentences.>"
                 }},
                 "sources": [
                     {{
@@ -690,7 +640,7 @@ class HSPromptTemplates:
                 }},
                 "opacity_risk": "<50-100 words. Data gaps or lag alerts vs Target Year {y0}. Empty string if none.>",
                 "data_gap_analysis": "<50-100 words. What was unavailable within {y4}-{y0}? What does absence signal? 1-2 sentences.>",
-                "red_flag": "<50-100 words. Systemic concerns: cosmetic reform, single-source claims, elite capture, data suppression. Empty string if none.>"
+                "red_flag": "<50-100 words. Systemic concerns: cosmetic reform, single-source claims, data suppression. Avoid repeated red flags: 'elite capture' and 'rural disparities' cannot be the finding in every domain. Must be specific to this pillar. Empty string if none.>"
             }}
 
              **CRITICAL RULES:**
@@ -701,7 +651,8 @@ class HSPromptTemplates:
             - Prefer Primary Government > International > Academic/NGO > Media
             - Include 2 to 7 sources when available; if only 1, note limited corroboration in opacity_risk
             - Reflect verified real-time risks in ai_score, ai_progress, and red_flag
-  - Do not rely only on media without higher-tier corroboration
+            - Avoid repeated red flags: "Elite capture" and "rural disparities" cannot be the finding in every domain. Identify a concern unique and specific to this domain.
+            - Do not rely only on media without higher-tier corroboration
             - Keep output clear and readable for general audiences
 
             {HSPromptTemplates._OUTPUT_STYLE}
@@ -730,20 +681,24 @@ class HSPromptTemplates:
         YOUR MANDATORY PROCESS (execute in full):
         Step 1:  Search broadly across all pillar domains AND the ten trajectory
                  predictions (geopolitics, security, governance, macro-fiscal,
-                 corridors, society, climate, cyber/information, humanitarian, class).
-        Step 2:  Establish the temporal scope (1950-present), with extra weight on
-                 current 7-30 day signals and 12-24 month strategic foresight.
+                 corridors, society, climate, cyber/information, humanitarian, class). 
+       Step 2:  Establish the temporal scope: the last 12 months is the assessment window
+                (earlier history only as background), with extra weight on current 7-30 day
+                signals and 12-24 month strategic foresight. Build a 12-month event timeline:
+                coups, elections, leadership changes, suspensions and major crises must
+                appear, with dates.
         Step 3:  Collect four-layer evidence at country scale (structural laws/institutions/
                  treaties; operational enforcement/security/administration; outcome
-                 incidents/displacement/throughput; perception of public trust and grievance).
+                 incidents/displacement/throughput).
         Step 4:  Screen for country-level distortion (curated official statistics,
                  suppressed court or security data, elite-only reporting).
-        Step 5:  Identify cross-pillar patterns — look across the whole assessment,
+        Step 5:  Identify cross-pillar patterns - look across the whole assessment,
                  not pillar by pillar. Several weak scores may share one institutional
                  cause; one shock (conflict, capture, corridor, climate) may be hitting several domains.
         Step 6:  Apply relational integrity test across the HornScope system.
         Step 7:  Run country-scale stress simulation (political fragmentation, fiscal/
-                 climate shock, disinformation or emergency-decree narrative).
+                 climate shock, disinformation or emergency-decree narrative). Each shock
+                 MUST be specific: a named trigger, likely size, probability, and time horizon.
         Step 8:  Test geographic and corridor equity (core vs hinterland, included vs
                  excluded communities).
         Step 9:  Apply inequality / capture adjustment if needed.
@@ -776,35 +731,64 @@ class HSPromptTemplates:
            - "Medium": Sufficient evidence across most domains with minor data lags.
            - "Low": Significant data gaps, opacity, or heavily contradictory reporting.
            Must be strictly "High", "Medium", or "Low" (never null, N/A, or Unknown).
+ 
+        CONTENT QUALITY RULES (MANDATORY):
+        1. FIELD SEPARATION: temporal_reliability and reliability_assessment are different
+           fields and must never be swapped or repeat each other.
+           - temporal_reliability = consistency over time: would repeated assessments of a
+             broadly stable country produce a comparable score, and do any score changes
+             reflect genuine strategic developments rather than shifts in evidence
+             interpretation (unexpected fluctuations trigger methodological review).
+           - reliability_assessment = consistency of method: whether applying the HornScope
+             methodology again would produce comparable results, free of evaluator variation
+             or inconsistent interpretation of scoring guidance.
+           Data lags, Unknown years and source corroboration belong in temporal_reliability
+           only where they affect time-consistency; otherwise they belong in data_integrity_index.
+        2. DIVERSITY RULE: Do not cite the same risk (e.g. elite capture, rural disparities)
+           as the main finding in more than one section. Each section's primary risk must be
+           specific to that domain and backed by its own evidence. Cross-cutting causes belong
+           in cross_pillar_patterns only.
+        3. SPECIFIC SHOCKS: Every shock in stress_simulation must state (a) a named trigger,
+           (b) likely size or magnitude as a number or range, (c) probability as a percentage,
+           and (d) a time horizon. Only then describe how the country holds.
+        4. SCENARIO SIGNPOSTS: scenario_analysis must give a probability (%) and time horizon
+           for each of baseline, best-case and worst-case (probabilities sum to 100), plus 1-2
+           observable signposts per scenario (indicator + direction or level) showing which
+           scenario is unfolding.
+        5. EARLY-WARNING THRESHOLDS: early_warning_assessment must state, for each flagged
+           indicator, what change in which indicator triggers concern (a numeric or event
+           threshold, the direction of change, and the time window).
+        6. 12-MONTH EVENT TIMELINE: The assessment MUST include a timeline of the last 12
+           months. Coups, elections, leadership changes, suspensions and major crises must
+           appear, each with a date (month and year at minimum, day where known). Do not
+           omit a major event, and do not invent one for a category where nothing occurred.
 
         OUTPUT: Return ONLY valid JSON (no markdown, no extra text):
         {{
-        
-            "ai_progress": <0.00-100.00 or null>,
+            "ai_progress": <0.00-100.00>,
             "confidence_level": "<High|Medium|Low>",
-            "executive_summary": "<500-700 words, ASCII only. Flowing prose — no section headers, no bullet points. Four sections in order: Country Overview, System Diagnosis (MUST name the trajectory class), Strategic Strengths, Structural Risks (MUST cover the most material of the nine trajectory risks).>",
+            "executive_summary": "<550-700 words, ASCII only. Flowing prose - no section headers, no bullet points. Four sections in order: Country Overview (MUST include the dated 12-month event timeline), System Diagnosis (MUST name the trajectory class), Strategic Strengths, Structural Risks (MUST cover the most material of the nine trajectory risks).>",
             "four_layer_evidence": {{
-                "structural": "<20-150 words. Key structural evidence — laws, institutions, treaties, mandates.>",
-                "operational": "<20-150 words. Key operational evidence — enforcement, security operations, administration, corridor operations.>",
-                "outcome": "<20-150 words. Key outcome evidence — conflict incidents, displacement, corridor throughput, measured results.>",
-                "perception": "<20-150 words. Key perception evidence — public trust, grievance, and elite chatter.>"
+                "structural": "<20-150 words. Key structural evidence - laws, institutions, treaties, mandates.>",
+                "operational": "<20-150 words. Key operational evidence - enforcement, security operations, administration, corridor operations.>",
+                "outcome": "<20-150 words. Key outcome evidence - conflict incidents, displacement, corridor throughput, measured results.>"
             }},
-             "temporal_reliability": "<20-150 words. How current and time-consistent is the evidence? Note lags, Unknown years, and whether sources match the assessment window.>",
-            "reliability_assessment": "<20-150 words. How reliable is the country evidence overall? Corroboration across pillars, contested claims, and Unknown indicators.>",
+            "temporal_reliability": "<40-150 words. TEMPORAL RELIABILITY ONLY (consistency over time). Start with a verdict: Stable, Moderately volatile or Volatile conditions. Then name the specific developments or evidence changes in this country that would or would not move the score on reassessment, and say whether any would trigger a methodological review. Do not restate the question or open with a general statement about the methodology.>",
+            "reliability_assessment": "<40-150 words. RELIABILITY ONLY (consistency of method). Start with a verdict: High, Moderate or Low methodological consistency for this country. Then give country-specific reasons: which pillar scores rest on clear scoring guidance and which depend on evaluator interpretation, and whether ai_progress sits within 2 points of a class boundary (e.g. 54.99/55.00), where small interpretation differences would change the class. Do not restate the question or open with a general statement about the methodology.>",
             "stress_simulation": {{
-                "geopolitical_shock": "<20-150 words. How would this country hold under neighbour disputes, external interference, or regional-order shock?>",
-                "economic_shock": "<20-150 words. How would this country hold under growth, inflation, debt, or commodity-price shock?>",
-                "finance_shock": "<20-150 words. How would public finance, banking, and revenue mobilisation hold under fiscal or banking stress?>",
+                "geopolitical_shock": "<40-150 words. Name the trigger (neighbour dispute, external interference, or regional-order shock), likely size, probability (%) and time horizon. Then state how the country would hold.>",
+                "economic_shock": "<40-150 words. Name the trigger (growth, inflation, debt, or commodity-price shock), likely size as a number or range, probability (%) and time horizon. Then state how the country would hold.>",
+                "finance_shock": "<40-150 words. Name the trigger (fiscal or banking stress, revenue shortfall), likely size as a number or range, probability (%) and time horizon. Then state how public finance, banking, and revenue mobilisation would hold.>"
             }},
             "opacity_risk": "<20-150 words. Which HornScope pillars had the most opaque or missing data, and what does that signal about transparency?>",
-            "cross_pillar_patterns": "<20-150 words. Themes cutting across HornScope pillars — geopolitics, security, governance, economy, corridors, society, climate, cyber, humanitarian.>",
+            "cross_pillar_patterns": "<20-150 words. Themes cutting across HornScope pillars - geopolitics, security, governance, economy, corridors, society, climate, cyber, humanitarian.>",
             "relational_integrity": "<20-150 words. Does the country's strategic system show alignment, or are there critical disconnects across pillars?>",
             "institutional_capacity": "<20-150 words. Overall state capacity to govern, enforce, and deliver across HornScope pillars.>",
-            "early_warning_assessment": "<80-150 words. HornScope early-warning view: which pillar indicators are deteriorating, any critical-indicator (Tier 1) failure risk, and what decision-makers should watch in the next 3-12 months.>",
+            "early_warning_assessment": "<80-150 words. HornScope early-warning view: list 3-5 indicators that are deteriorating, each with a threshold that should trigger concern (indicator, level or event, direction of change, time window), any critical-indicator (Tier 1) failure risk, and what decision-makers should watch in the next 3-12 months.>",
             "strategic_recommendation": "<100-150 words. The 2-3 highest-priority, evidence-grounded actions for governments, intelligence, and development partners.>",
             "data_transparency_note": "<MAX 150 words, ASCII only. Explain the value of the HornScope assessment for this country. Reference the 11 pillars, relational diagnostics, and data integrity.>",
             "primary_source": "<20-150 words. Name of the most authoritative source used in this assessment.>",
-            "scenario_analysis": "<80-150 words. HornScope strategic foresight: baseline, best-case, and worst-case / shock trajectories across geopolitics, security, governance, economy, climate, and humanitarian resilience.>",
+            "scenario_analysis": "<120-200 words. HornScope strategic foresight across geopolitics, security, governance, economy, climate, and humanitarian resilience. Give baseline, best-case, and worst-case trajectories, each with a probability (%) (summing to 100) and a time horizon, plus 1-2 observable signposts per scenario (indicator + direction or level) showing which one is unfolding.>",
             "data_integrity_index": "<50-100 words. HornScope Data Integrity Index: how complete and verifiable the evidence is (High / Moderate / Limited / Low transparency), and where Unknown or missing indicators cluster.>"
         }}
 
@@ -812,11 +796,13 @@ class HSPromptTemplates:
         EXECUTIVE SUMMARY WRITING FRAMEWORK
         --------------------------------------------------
         The executive_summary field MUST follow this exact 4-section structure.
-        Target: 550-700 words total. Flowing prose — no headers, no bullet points.
+        Target: 550-700 words total. Flowing prose - no headers, no bullet points.
 
         SECTION 1 - COUNTRY OVERVIEW (~120-150 words):
         How strong is this country's strategic position overall? Context, 12-24 month
-        trajectory, and Horn of Africa / East Africa positioning.
+        trajectory, and Horn of Africa / East Africa positioning. MUST include the 12-month
+        event timeline: coups, elections, leadership changes, suspensions and major crises,
+        each with a date.
 
         SECTION 2 - SYSTEM DIAGNOSIS (~130-170 words):
         What type of strategic system is this structurally?
@@ -831,7 +817,7 @@ class HSPromptTemplates:
         Identify the 3-5 most critical systemic risks with cause-effect relationships,
         drawn from geopolitics, security, governance, macro-fiscal stress, corridor
         disruption, social strain, climate shock, cyber/information breakdown, and
-        humanitarian resilience.
+        humanitarian resilience. Each risk must be distinct (see DIVERSITY RULE).
 
         {HSPromptTemplates._OUTPUT_STYLE}
         {HSPromptTemplates._JSON_RULES}
@@ -843,7 +829,7 @@ class HSPromptTemplates:
     #  Produces executive summary grounded in local + public data.        #
     # ================================================================== #
     @staticmethod
-    def country_summery_system_prompt(publicContext: str, documentContext: str) -> str:
+    def country_summary_system_prompt(publicContext: str, documentContext: str) -> str:
         publicContext = HSPromptTemplates._clip_context(publicContext, 8000)
         documentContext = HSPromptTemplates._clip_context(documentContext, 8000)
         return f"""
@@ -898,13 +884,13 @@ class HSPromptTemplates:
         -----------------------------------------
         OUTPUT REQUIREMENTS
         -----------------------------------------
-        Return ONLY valid JSON. Close every brace. Never truncate.
+        Return ONLY valid JSON in a single root object. Close every brace. Never truncate.
 
         {{
             "immediateSituation": {{
                 "summary": "<120-160 words. Current strategic situation, what is changing in security/governance/corridors/climate/humanitarian conditions, what needs decision-maker attention.>",
                 "key_developments": "<Exactly 3 items. 1) ...\\n2) ...\\n3) ... Headline-style strategic signals.>",
-                "critical_risks": "<Exactly 3 items. 1) ...\\n2) ...\\n3) ... Drawn from the nine trajectory risks.>",
+                "critical_risks": "<Exactly 3 items. 1) ...\\n2) ...\\n3) ... Drawn from the nine trajectory risks. Avoid repeated tropes.>",
                 "gaps": "<Exactly 3 items. 1) ...\\n2) ...\\n3) ... Data, security, governance, or corridor gaps.>"
             }},
             "executive_summary": "<550-700 words, ASCII. Flowing prose, no headers. Four sections: Country Overview, System Diagnosis (MUST name trajectory class), Strategic Strengths, Structural Risks. Separate sections with \\n\\n.>",
@@ -999,13 +985,13 @@ class HSPromptTemplates:
         -----------------------------------------
         OUTPUT REQUIREMENTS
         -----------------------------------------
-        Return ONLY valid JSON. Close every brace. Never truncate.
+        Return ONLY valid JSON in a single root object. Close every brace. Never truncate.
 
         {{
             "immediateSituation": {{
                 "summary": "<120-160 words. CURRENT strategic situation and recent security/governance/corridor/climate/humanitarian changes only.>",
                 "key_developments": "<Exactly 3 items. 1) ...\\n2) ...\\n3) ... Current strategic signals.>",
-                "critical_risks": "<Exactly 3 items. 1) ...\\n2) ...\\n3) ... From the nine trajectory risks.>",
+                "critical_risks": "<Exactly 3 items. 1) ...\\n2) ...\\n3) ... From the nine trajectory risks. Avoid repeated tropes.>",
                 "gaps": "<Exactly 3 items. 1) ...\\n2) ...\\n3) ... Data, security, corridor, or governance gaps.>"
             }},
             "key_findings": "<Exactly 6 numbered natural paragraphs grounded in CURRENT 7-30 day signals. 1) <70-100 word paragraph: strategic condition, then evidence/sources, then mechanism, then Horn of Africa / East Africa strategic consequence. No labels such as Condition: or Evidence:>\\n2) ...>",
